@@ -26,12 +26,7 @@ const Favorites = () => {
               <EntryCard 
                 key={entry.id} 
                 entry={entry} 
-                className="transition-all"
-                style={{ 
-                  animationDelay: `${index * 0.05}s`,
-                  opacity: 0,
-                  animation: 'scale-in 0.3s ease-out forwards',
-                }}
+                className={`animate-scale-in transition-all delay-${index}`}
               />
             ))}
           </div>
