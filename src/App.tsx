@@ -1,10 +1,15 @@
+
 import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
+const Landing = lazy(() => import("./pages/Landing"));
+const Auth = lazy(() => import("./pages/Auth"));
 const Index = lazy(() => import("./pages/Index"));
 const EntryDetail = lazy(() => import("./pages/EntryDetail"));
 const NewEntry = lazy(() => import("./pages/NewEntry"));
@@ -21,27 +26,76 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={<div>Loading...</div>}>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/entry/:id" element={<EntryDetail />} />
-            <Route path="/new" element={<NewEntry />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/shared" element={<Shared />} />
-            <Route path="/bookmarks" element={<Bookmarks />} />
-            <Route path="/baby-health" element={<BabyHealth />} />
-            <Route path="/wallet" element={<Wallet />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/insights" element={<Insights />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense fallback={<div>Loading...</div>}>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
+              
+              {/* Protected routes */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              <Route path="/entry/:id" element={
+                <ProtectedRoute>
+                  <EntryDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/new" element={
+                <ProtectedRoute>
+                  <NewEntry />
+                </ProtectedRoute>
+              } />
+              <Route path="/favorites" element={
+                <ProtectedRoute>
+                  <Favorites />
+                </ProtectedRoute>
+              } />
+              <Route path="/shared" element={
+                <ProtectedRoute>
+                  <Shared />
+                </ProtectedRoute>
+              } />
+              <Route path="/bookmarks" element={
+                <ProtectedRoute>
+                  <Bookmarks />
+                </ProtectedRoute>
+              } />
+              <Route path="/baby-health" element={
+                <ProtectedRoute>
+                  <BabyHealth />
+                </ProtectedRoute>
+              } />
+              <Route path="/wallet" element={
+                <ProtectedRoute>
+                  <Wallet />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/insights" element={
+                <ProtectedRoute>
+                  <Insights />
+                </ProtectedRoute>
+              } />
+              
+              {/* Fallback routes */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
