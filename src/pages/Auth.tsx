@@ -13,28 +13,37 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { login, signup, sendPasswordResetEmail } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      if (isLogin) {
+      if (isForgotPassword) {
+        await sendPasswordResetEmail(email);
+        toast({
+          title: "Password reset email sent",
+          description: "Please check your email for password reset instructions.",
+        });
+        setIsForgotPassword(false);
+      } else if (isLogin) {
         await login(email, password);
         toast({
           title: "Logged in successfully",
           description: "Welcome back to Lil Baby Kicks journal!",
         });
+        navigate("/");
       } else {
         await signup(name, email, password);
         toast({
           title: "Account created successfully",
           description: "Welcome to Lil Baby Kicks journal!",
         });
+        navigate("/");
       }
-      navigate("/");
     } catch (error) {
       toast({
         title: "Authentication error",
@@ -44,6 +53,16 @@ const Auth = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSkipLogin = () => {
+    // Use guest mode - set localStorage flag
+    localStorage.setItem("guestMode", "true");
+    toast({
+      title: "Using guest mode",
+      description: "Your data will be stored locally on this device only.",
+    });
+    navigate("/");
   };
 
   return (
@@ -65,17 +84,25 @@ const Auth = () => {
         <div className="w-full space-y-6 animate-fade-in">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight">
-              {isLogin ? "Welcome Back" : "Create Your Journal"}
+              {isForgotPassword 
+                ? "Reset Your Password" 
+                : isLogin 
+                  ? "Welcome Back" 
+                  : "Create Your Journal"
+              }
             </h1>
             <p className="text-sm text-muted-foreground">
-              {isLogin
-                ? "Sign in to continue your journaling journey"
-                : "Sign up to start capturing your precious moments"}
+              {isForgotPassword
+                ? "Enter your email to receive reset instructions"
+                : isLogin
+                  ? "Sign in to continue your journaling journey"
+                  : "Sign up to start capturing your precious moments"
+              }
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && !isForgotPassword && (
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium">
                   Your Name
@@ -89,7 +116,7 @@ const Auth = () => {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
                     className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
-                    required={!isLogin}
+                    required={!isLogin && !isForgotPassword}
                   />
                 </div>
               </div>
@@ -113,23 +140,25 @@ const Auth = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
-                  required
-                />
+            {!isForgotPassword && (
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
+                    required={!isForgotPassword}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <button
               type="submit"
@@ -141,6 +170,8 @@ const Auth = () => {
             >
               {isSubmitting ? (
                 <div className="h-5 w-5 rounded-full border-2 border-t-transparent border-white animate-spin" />
+              ) : isForgotPassword ? (
+                "Send Reset Instructions"
               ) : isLogin ? (
                 <>
                   <LogIn className="w-5 h-5" />
@@ -155,14 +186,44 @@ const Auth = () => {
             </button>
           </form>
 
-          <div className="text-center">
+          <div className="text-center flex items-center justify-center space-x-2 text-sm">
             <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm underline text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setIsLogin(!isLogin);
+              }}
+              className="underline text-muted-foreground hover:text-foreground transition-colors"
               disabled={isSubmitting}
             >
               {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
             </button>
+            
+            <span className="text-muted-foreground">|</span>
+            
+            {isLogin && (
+              <button
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setIsLogin(true);
+                }}
+                className="underline text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSubmitting}
+              >
+                Forgot password?
+              </button>
+            )}
+          </div>
+
+          <div className="text-center pt-2">
+            <button 
+              onClick={handleSkipLogin}
+              className="px-4 py-2 text-sm rounded-xl glass-morphism hover:bg-black/5 transition-all"
+            >
+              Skip login & use guest mode
+            </button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Guest mode stores data locally on your device for privacy
+            </p>
           </div>
         </div>
       </main>

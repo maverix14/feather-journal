@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isGuestMode } = useAuth();
 
   if (loading) {
     // Return a loading state while checking authentication
@@ -22,8 +22,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    // Redirect to landing page if not authenticated
+  if (!isAuthenticated && !isGuestMode) {
+    // Redirect to landing page if not authenticated and not in guest mode
     return <Navigate to="/landing" replace />;
   }
 

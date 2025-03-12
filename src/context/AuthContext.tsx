@@ -14,6 +14,8 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  isGuestMode: boolean;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,10 +23,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuestMode, setIsGuestMode] = useState(false);
 
-  // Check if user is already logged in on mount
+  // Check if user is already logged in on mount or using guest mode
   useEffect(() => {
     const checkUserSession = () => {
+      // Check if guest mode is enabled
+      const guestMode = localStorage.getItem("guestMode");
+      if (guestMode === "true") {
+        setIsGuestMode(true);
+        setLoading(false);
+        return;
+      }
+
       // In a real app, this would check a token in localStorage or cookies
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
@@ -52,6 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+      // Ensure guest mode is disabled when logging in
+      localStorage.removeItem("guestMode");
+      setIsGuestMode(false);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -76,8 +90,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+      // Ensure guest mode is disabled when signing up
+      localStorage.removeItem("guestMode");
+      setIsGuestMode(false);
     } catch (error) {
       console.error("Signup error:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock password reset function
+  const sendPasswordResetEmail = async (email: string) => {
+    setLoading(true);
+    try {
+      // This simulates an API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log(`Password reset email sent to: ${email}`);
+      // In a real app, this would trigger a password reset email
+    } catch (error) {
+      console.error("Password reset error:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -87,6 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    setIsGuestMode(false);
+    localStorage.removeItem("guestMode");
   };
 
   return (
@@ -97,7 +132,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         signup,
         logout,
-        isAuthenticated: !!user
+        isAuthenticated: !!user,
+        isGuestMode,
+        sendPasswordResetEmail
       }}
     >
       {children}
