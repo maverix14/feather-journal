@@ -1,12 +1,20 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomBar from "@/components/BottomBar";
 import EntryCard from "@/components/EntryCard";
+import EntryCardSkeleton from "@/components/EntryCardSkeleton";
 import { mockEntries } from "@/lib/journalData";
 
 const Index = () => {
-  const [entries] = useState(mockEntries);
+  const [entries, setEntries] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setEntries(mockEntries);
+      setIsLoading(false);
+    }, 250);
+  }, []);
 
   return (
     <div className="min-h-screen pb-24 px-4">
@@ -21,13 +29,21 @@ const Index = () => {
         </div>
         
         <div className="space-y-4">
-          {entries.map((entry, index) => (
-            <EntryCard 
-              key={entry.id} 
-              entry={entry} 
-              className={`animate-scale-in transition-all delay-${index}`}
-            />
-          ))}
+          {isLoading ? (
+            <>
+              <EntryCardSkeleton />
+              <EntryCardSkeleton />
+              <EntryCardSkeleton />
+            </>
+          ) : (
+            entries.map((entry, index) => (
+              <EntryCard 
+                key={entry.id} 
+                entry={entry} 
+                className={`animate-scale-in transition-all delay-${index}`}
+              />
+            ))
+          )}
         </div>
       </main>
       

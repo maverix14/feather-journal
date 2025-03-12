@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -46,6 +45,8 @@
     font-feature-settings: "ss01", "ss03";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image: linear-gradient(to bottom, #E3E3E3 24px, #D6D6D6 25px, #E3E3E3 26px); /* Notebook lines */
+    background-size: 100% 26px;
   }
 }
 
@@ -74,8 +75,25 @@
     @apply hover:scale-110 transition-all duration-300 ease-out;
   }
 
+  .attachment-button {
+    @apply flex flex-col items-center justify-center w-16 h-16 rounded-lg neo-shadow hover:neo-inset transition-all duration-300;
+  }
+  
   .text-balance {
     text-wrap: balance;
+  }
+  
+  .glass-morphism {
+    @apply backdrop-blur-md bg-black/20 border border-white/10 shadow-lg;
+  }
+
+  @keyframes progress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+  }
+
+  .animate-progress {
+    animation: progress 30s linear;
   }
 }
 
