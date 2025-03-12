@@ -2,12 +2,11 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { MoodType } from "./MoodSelector";
 
-interface EntryHeadingProps {
+export interface EntryHeadingProps {
   handleSubmit?: (e: React.FormEvent) => void;
   title?: string;
   date?: Date;
