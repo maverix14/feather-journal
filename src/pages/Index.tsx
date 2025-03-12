@@ -34,7 +34,7 @@ const Index = () => {
 
   return (
     <div className="container mx-auto max-w-md px-4 pb-24">
-      <Header title="My Journal" />
+      <Header />
 
       <div className="relative my-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -57,15 +57,15 @@ const Index = () => {
           // Render entries
           filteredEntries.map((entry) => (
             <Link to={`/entry/${entry.id}`} key={entry.id}>
-              <EntryCard
-                title={entry.title}
-                date={new Date(entry.date)}
-                excerpt={entry.content}
-                mood={entry.mood}
-                favorite={entry.favorite}
-                imageUrl={entry.media.find(m => m.type === "photo" || m.type === "gallery")?.url}
-                hasAudio={entry.media.some(m => m.type === "audio")}
-              />
+              <EntryCard entry={{
+                title: entry.title,
+                date: new Date(entry.date),
+                content: entry.content,
+                mood: entry.mood || '',
+                favorite: entry.favorite,
+                media: entry.media,
+                hasAudio: entry.media.some(m => m.type === "audio")
+              }} />
             </Link>
           ))
         ) : (

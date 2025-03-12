@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +21,11 @@ export interface JournalEntry {
   updated_at?: string;
 }
 
+// Type for Supabase JSON conversion
+type SupabaseEntry = Omit<JournalEntry, 'media'> & {
+  media: any;
+};
+
 // Local storage key
 const JOURNAL_ENTRIES_KEY = 'journal_entries';
 
@@ -32,6 +38,14 @@ const getEntriesFromLocalStorage = (): JournalEntry[] => {
 // Save entries to local storage
 const saveEntriesToLocalStorage = (entries: JournalEntry[]) => {
   localStorage.setItem(JOURNAL_ENTRIES_KEY, JSON.stringify(entries));
+};
+
+// Convert Supabase entry to JournalEntry
+const convertSupabaseEntry = (entry: any): JournalEntry => {
+  return {
+    ...entry,
+    media: Array.isArray(entry.media) ? entry.media : []
+  };
 };
 
 // Service functions
@@ -48,7 +62,7 @@ export const journalService = {
           .order('date', { ascending: false });
         
         if (error) throw error;
-        return data as JournalEntry[];
+        return data ? data.map(convertSupabaseEntry) : [];
       } catch (error) {
         console.error('Error fetching entries from Supabase:', error);
         // Fallback to local storage if remote fetch fails
@@ -73,7 +87,7 @@ export const journalService = {
           .maybeSingle();
         
         if (error) throw error;
-        return data as JournalEntry;
+        return data ? convertSupabaseEntry(data) : null;
       } catch (error) {
         console.error('Error fetching entry from Supabase:', error);
         
@@ -114,7 +128,7 @@ export const journalService = {
           .single();
         
         if (error) throw error;
-        return data as JournalEntry;
+        return data ? convertSupabaseEntry(data) : newEntry;
       } catch (error) {
         console.error('Error creating entry in Supabase:', error);
         
@@ -151,7 +165,7 @@ export const journalService = {
           .single();
         
         if (error) throw error;
-        return data as JournalEntry;
+        return data ? convertSupabaseEntry(data) : null;
       } catch (error) {
         console.error('Error updating entry in Supabase:', error);
         

@@ -92,10 +92,9 @@ const NewEntry = () => {
       </div>
 
       <div className="space-y-6 mt-4">
-        <EntryTitleInput
-          value={title}
-          onChange={setTitle}
+        <EntryTitleInput 
           placeholder="What's on your mind today?"
+          onChange={setTitle}
         />
 
         <AttachmentHandler
@@ -105,7 +104,7 @@ const NewEntry = () => {
         />
 
         <div className="pt-4 space-y-6">
-          <MoodSelector value={mood} onChange={setMood} />
+          <MoodSelector selectedMood={mood} onMoodSelect={setMood} />
           
           <BabyKickTracker 
             kickCount={kickCount} 
@@ -113,7 +112,7 @@ const NewEntry = () => {
           />
           
           <div className="pt-4">
-            <SharingToggle value={isShared} onChange={setIsShared} />
+            <SharingToggle isShared={isShared} onToggle={setIsShared} />
           </div>
         </div>
       </div>
