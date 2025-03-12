@@ -1,130 +1,122 @@
+
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
-import BottomBar from "@/components/BottomBar";
-import { cn } from "@/lib/utils";
-import MoodSelector, { MoodType } from "@/components/MoodSelector";
+import { ChevronLeft, Save } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
+import EntryTitleInput from "@/components/EntryTitleInput";
+import MoodSelector from "@/components/MoodSelector";
+import AttachmentHandler, { AttachmentType } from "@/components/AttachmentHandler";
 import BabyKickTracker from "@/components/BabyKickTracker";
 import SharingToggle from "@/components/SharingToggle";
-import EntryHeading from "@/components/EntryHeading";
-import EntryTitleInput from "@/components/EntryTitleInput";
-import AttachmentHandler, { AttachmentType } from "@/components/AttachmentHandler";
-
-interface NewEntryProps {
-  id: string;
-  title: string;
-  content: string;
-  date: Date;
-  favorite: boolean;
-  media: {
-    type: AttachmentType;
-    url: string;
-  }[];
-  mood?: MoodType;
-  kickCount?: number;
-  isShared?: boolean;
-}
+import { journalService } from "@/services/journalService";
 
 const NewEntry = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [mood, setMood] = useState<MoodType>(null);
+  const [mood, setMood] = useState<string | undefined>(undefined);
   const [kickCount, setKickCount] = useState(0);
-  const [isShared, setIsShared] = useState(false); // Default to private
+  const [isShared, setIsShared] = useState(false);
   const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>([]);
-  const [backgroundColor, setBackgroundColor] = useState("#FAFAFA");
+  const [isSaving, setIsSaving] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const getMoodColor = (mood: MoodType | undefined) => {
-      switch (mood) {
-        case "happy":
-          return "#FEF7CD";
-        case "content":
-          return "#F2FCE2";
-        case "neutral":
-          return "#F1F0FB";
-        case "sad":
-          return "#D3E4FD";
-        case "stressed":
-          return "#FFDEE2";
-        default:
-          return "#FAFAFA";
-      }
-    };
-
-    setBackgroundColor(getMoodColor(mood));
-  }, [mood]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSave = async () => {
     if (!title.trim()) {
       toast({
-        title: "Error",
-        description: "Please provide a title for your entry",
+        title: "Title is required",
+        description: "Please add a title for your journal entry",
         variant: "destructive",
       });
       return;
     }
-    
-    // Here you would save the entry with all the data, including attachments
-    console.log("Submitting entry with data:", {
-      title,
-      content,
-      mood,
-      kickCount,
-      isShared,
-      attachments,
-    });
 
-    toast({
-      title: "Success",
-      description: "Your journal entry has been saved",
-    });
-    
-    setTimeout(() => navigate("/"), 500);
+    setIsSaving(true);
+    try {
+      const newEntry = await journalService.createEntry({
+        title,
+        content,
+        date: new Date().toISOString(),
+        favorite: false,
+        mood,
+        kick_count: kickCount,
+        is_shared: isShared,
+        media: attachments,
+      });
+
+      toast({
+        title: "Entry saved",
+        description: "Your journal entry has been saved successfully",
+      });
+      
+      navigate(`/entry/${newEntry.id}`);
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      toast({
+        title: "Failed to save",
+        description: "There was an error saving your entry. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKickCountChange = (count: number) => {
+    setKickCount(count);
+  };
+
+  // Handle attachments
+  const handleAttachmentsChange = (newAttachments: { type: AttachmentType; url: string }[]) => {
+    setAttachments(newAttachments);
   };
 
   return (
-    <div
-      className="min-h-screen pb-24 px-4 transition-colors duration-1000"
-      style={{ backgroundColor: backgroundColor }}
-    >
-      <EntryHeading handleSubmit={handleSubmit} />
-      
-      <main className="animate-fade-in">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <EntryTitleInput title={title} setTitle={setTitle} />
-          
-          <MoodSelector 
-            selectedMood={mood} 
-            onChange={setMood} 
-            className="mb-4" 
-          />
-          
-          <AttachmentHandler 
-            content={content}
-            setContent={setContent}
-            onAttachmentsChange={setAttachments}
-          />
+    <div className="container max-w-md mx-auto px-4 pb-24">
+      <div className="sticky top-0 z-10 flex items-center justify-between py-4 bg-background">
+        <Link to="/" className="w-10 h-10 rounded-full glass-morphism flex items-center justify-center">
+          <ChevronLeft className="w-5 h-5" />
+        </Link>
+        
+        <button
+          onClick={handleSave}
+          disabled={isSaving || !title.trim()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl glass-morphism disabled:opacity-50"
+        >
+          {isSaving ? (
+            <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-current animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
+          Save
+        </button>
+      </div>
 
-          <div className="flex items-stretch justify-between gap-3 my-4">
-            <SharingToggle 
-              isShared={isShared} 
-              onShareChange={setIsShared} 
-              className="flex-1 h-full"
-            />
-            
-            <BabyKickTracker 
-              kickCount={kickCount} 
-              onKickCountChange={setKickCount} 
-              className="flex-1 h-full"
-            />
+      <div className="space-y-6 mt-4">
+        <EntryTitleInput
+          value={title}
+          onChange={setTitle}
+          placeholder="What's on your mind today?"
+        />
+
+        <AttachmentHandler
+          content={content}
+          setContent={setContent}
+          onAttachmentsChange={handleAttachmentsChange}
+        />
+
+        <div className="pt-4 space-y-6">
+          <MoodSelector value={mood} onChange={setMood} />
+          
+          <BabyKickTracker 
+            kickCount={kickCount} 
+            onKickCountChange={handleKickCountChange} 
+          />
+          
+          <div className="pt-4">
+            <SharingToggle value={isShared} onChange={setIsShared} />
           </div>
-        </form>
-      </main>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { journalService } from "@/services/journalService";
 
 type User = {
   id: string;
@@ -66,6 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure guest mode is disabled when logging in
       localStorage.removeItem("guestMode");
       setIsGuestMode(false);
+      
+      // Sync local entries to Supabase
+      await journalService.syncLocalEntriesToSupabase(userData.id);
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -93,6 +97,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure guest mode is disabled when signing up
       localStorage.removeItem("guestMode");
       setIsGuestMode(false);
+      
+      // Sync local entries to Supabase
+      await journalService.syncLocalEntriesToSupabase(userData.id);
     } catch (error) {
       console.error("Signup error:", error);
       throw error;
