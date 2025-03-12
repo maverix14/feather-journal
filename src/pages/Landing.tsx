@@ -1,7 +1,7 @@
 
 import React from "react";
 import Logo from "@/components/Logo";
-import { ChevronRight, ShieldCheck, HeartHandshake, BookOpen, DeviceMobile } from "lucide-react";
+import { ChevronRight, ShieldCheck, HeartHandshake, BookOpen, Smartphone } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Landing = () => {
@@ -51,7 +51,7 @@ const Landing = () => {
         <div className="bg-primary/5 rounded-xl p-6 w-full animate-fade-in delay-400">
           <div className="flex items-start gap-4">
             <div className="bg-primary/10 p-2 rounded-full">
-              <DeviceMobile className="w-5 h-5 text-primary" />
+              <Smartphone className="w-5 h-5 text-primary" />
             </div>
             <div>
               <h3 className="font-medium mb-1">Privacy-First Approach</h3>
