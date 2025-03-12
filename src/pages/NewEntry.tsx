@@ -4,7 +4,7 @@ import { ChevronLeft, Save } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import EntryTitleInput from "@/components/EntryTitleInput";
-import MoodSelector from "@/components/MoodSelector";
+import MoodSelector, { MoodType } from "@/components/MoodSelector";
 import AttachmentHandler, { AttachmentType } from "@/components/AttachmentHandler";
 import BabyKickTracker from "@/components/BabyKickTracker";
 import SharingToggle from "@/components/SharingToggle";
@@ -13,7 +13,7 @@ import { journalService } from "@/services/journalService";
 const NewEntry = () => {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [mood, setMood] = useState<string | undefined>(undefined);
+  const [mood, setMood] = useState<MoodType>(null);
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false);
   const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>([]);
@@ -93,8 +93,9 @@ const NewEntry = () => {
 
       <div className="space-y-6 mt-4">
         <EntryTitleInput 
+          title={title}
+          setTitle={setTitle}
           placeholder="What's on your mind today?"
-          onChange={setTitle}
         />
 
         <AttachmentHandler
@@ -104,7 +105,7 @@ const NewEntry = () => {
         />
 
         <div className="pt-4 space-y-6">
-          <MoodSelector selectedMood={mood} onMoodSelect={setMood} />
+          <MoodSelector selectedMood={mood} onChange={setMood} />
           
           <BabyKickTracker 
             kickCount={kickCount} 
@@ -112,7 +113,7 @@ const NewEntry = () => {
           />
           
           <div className="pt-4">
-            <SharingToggle isShared={isShared} onToggle={setIsShared} />
+            <SharingToggle isShared={isShared} onShareChange={setIsShared} />
           </div>
         </div>
       </div>

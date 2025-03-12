@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { journalService, JournalEntry } from "@/services/journalService";
+import { MoodType } from "@/components/MoodSelector";
 
 const EntryDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -189,7 +190,7 @@ const EntryDetail = () => {
         <EntryHeading
           title={entry.title}
           date={new Date(entry.date)}
-          mood={entry.mood}
+          mood={entry.mood as MoodType}
           kickCount={entry.kick_count}
         />
         

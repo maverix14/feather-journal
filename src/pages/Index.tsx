@@ -3,9 +3,10 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { PlusCircle, Search } from "lucide-react";
 import Header from "@/components/Header";
-import EntryCard from "@/components/EntryCard";
+import EntryCard, { EntryProps } from "@/components/EntryCard";
 import EntryCardSkeleton from "@/components/EntryCardSkeleton";
 import { journalService, JournalEntry } from "@/services/journalService";
+import { MoodType } from "@/components/MoodSelector";
 
 const Index = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -32,6 +33,30 @@ const Index = () => {
     entry.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Helper function to convert journal entry to EntryProps
+  const mapEntryToProps = (entry: JournalEntry): EntryProps => {
+    // Ensure mood is of type MoodType or null
+    const typedMood: MoodType = entry.mood as MoodType;
+    
+    // Ensure media has the correct type
+    const typedMedia = entry.media.map(m => ({
+      type: m.type as "photo" | "video" | "audio" | "gallery",
+      url: m.url
+    }));
+
+    return {
+      id: entry.id,
+      title: entry.title,
+      date: new Date(entry.date),
+      content: entry.content,
+      mood: typedMood,
+      favorite: entry.favorite,
+      media: typedMedia,
+      kickCount: entry.kick_count,
+      isShared: entry.is_shared
+    };
+  };
+
   return (
     <div className="container mx-auto max-w-md px-4 pb-24">
       <Header />
@@ -57,15 +82,7 @@ const Index = () => {
           // Render entries
           filteredEntries.map((entry) => (
             <Link to={`/entry/${entry.id}`} key={entry.id}>
-              <EntryCard entry={{
-                title: entry.title,
-                date: new Date(entry.date),
-                content: entry.content,
-                mood: entry.mood || '',
-                favorite: entry.favorite,
-                media: entry.media,
-                hasAudio: entry.media.some(m => m.type === "audio")
-              }} />
+              <EntryCard entry={mapEntryToProps(entry)} />
             </Link>
           ))
         ) : (
