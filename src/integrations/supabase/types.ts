@@ -9,51 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      journal_entries: {
-        Row: {
-          content: string | null
-          created_at: string
-          date: string
-          favorite: boolean
-          id: string
-          is_shared: boolean
-          kick_count: number | null
-          media: Json | null
-          mood: string | null
-          title: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          content?: string | null
-          created_at?: string
-          date?: string
-          favorite?: boolean
-          id?: string
-          is_shared?: boolean
-          kick_count?: number | null
-          media?: Json | null
-          mood?: string | null
-          title: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          content?: string | null
-          created_at?: string
-          date?: string
-          favorite?: boolean
-          id?: string
-          is_shared?: boolean
-          kick_count?: number | null
-          media?: Json | null
-          mood?: string | null
-          title?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never

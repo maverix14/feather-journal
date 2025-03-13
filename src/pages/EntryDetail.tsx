@@ -1,147 +1,221 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
-import EntryHeading from "@/components/EntryHeading";
-import EntryActions from "@/components/EntryActions";
-import EntryContent from "@/components/EntryContent";
-import HeaderNav from "@/components/HeaderNav";
-import { journalService, JournalEntry } from "@/services/journalService";
+import { ArrowLeft, Bookmark, Play, Pause, Mic } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { getEntry } from "@/lib/journalData";
+import { EntryProps } from "@/components/EntryCard";
+import BottomBar from "@/components/BottomBar";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { MoodType } from "@/components/MoodSelector";
+import BabyKickTracker from "@/components/BabyKickTracker";
+import SharingToggle from "@/components/SharingToggle";
+
+const getMoodColor = (mood: MoodType | undefined) => {
+  switch (mood) {
+    case "happy":
+      return "#FEF7CD";
+    case "content":
+      return "#F2FCE2";
+    case "neutral":
+      return "#F1F0FB";
+    case "sad":
+      return "#D3E4FD";
+    case "stressed":
+      return "#FFDEE2";
+    default:
+      return "#FAFAFA";
+    }
+  };
+
+const getMoodEmoji = (mood: MoodType | undefined) => {
+  switch (mood) {
+    case "happy":
+      return "😊";
+    case "content":
+      return "😌";
+    case "neutral":
+      return "😐";
+    case "sad":
+      return "😔";
+    case "stressed":
+      return "😰";
+    default:
+      return null;
+    }
+  };
 
 const EntryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [entry, setEntry] = useState<JournalEntry | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const { toast } = useToast();
+  const [entry, setEntry] = useState<EntryProps | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [mood, setMood] = useState<MoodType | undefined>(undefined);
+  const [kickCount, setKickCount] = useState(0);
+  const [isShared, setIsShared] = useState(false);
 
   useEffect(() => {
-    const loadEntry = async () => {
-      if (!id) return;
-      
-      try {
-        const data = await journalService.getEntry(id);
-        if (data) {
-          setEntry(data);
-          setIsFavorited(data.favorite);
-        } else {
-          toast({
-            title: "Entry not found",
-            description: "The journal entry you're looking for doesn't exist",
-            variant: "destructive",
-          });
-          navigate("/");
-        }
-      } catch (error) {
-        console.error('Error fetching entry:', error);
-        toast({
-          title: "Error loading entry",
-          description: "There was a problem loading this journal entry",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
+    if (id) {
+      const foundEntry = getEntry(id);
+      if (foundEntry) {
+        setEntry(foundEntry);
+        setIsFavorite(foundEntry.favorite || false);
+        setMood(foundEntry.mood);
+        setKickCount(foundEntry.kickCount || 0);
+        setIsShared(foundEntry.isShared || false);
       }
-    };
-
-    loadEntry();
-  }, [id, navigate]);
-
-  const handleToggleFavorite = async () => {
-    if (!id) return;
-    
-    try {
-      const updatedEntry = await journalService.toggleFavorite(id);
-      if (updatedEntry) {
-        setIsFavorited(updatedEntry.favorite);
-        toast({
-          title: updatedEntry.favorite ? "Added to favorites" : "Removed from favorites",
-          description: updatedEntry.favorite 
-            ? "This entry has been added to your favorites" 
-            : "This entry has been removed from your favorites",
-        });
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      toast({
-        title: "Action failed",
-        description: "There was a problem updating this entry",
-        variant: "destructive",
-      });
     }
+  }, [id]);
+
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    toast({
+      title: isFavorite ? "Removed from bookmarks" : "Added to bookmarks",
+      description: isFavorite ? "Entry removed from your bookmarks" : "Entry added to your bookmarks",
+    });
   };
 
-  const handleDeleteEntry = async () => {
-    if (!id) return;
-    
-    try {
-      const success = await journalService.deleteEntry(id);
-      if (success) {
-        toast({
-          title: "Entry deleted",
-          description: "Your journal entry has been deleted",
-        });
-        navigate("/");
-      } else {
-        throw new Error("Failed to delete entry");
-      }
-    } catch (error) {
-      console.error('Error deleting entry:', error);
-      toast({
-        title: "Delete failed",
-        description: "There was a problem deleting this entry",
-        variant: "destructive",
-      });
-    }
+  const toggleAudioPlayback = () => {
+    setIsPlaying(!isPlaying);
   };
-
-  if (loading) {
-    return (
-      <div className="container max-w-md mx-auto px-4 pb-24 animate-pulse">
-        <div className="h-8 w-40 bg-muted-foreground/30 rounded mb-6 mt-4"></div>
-        <div className="h-4 w-full bg-muted-foreground/30 rounded mb-2"></div>
-        <div className="h-4 w-3/4 bg-muted-foreground/30 rounded mb-4"></div>
-        <div className="h-24 w-full bg-muted-foreground/20 rounded mb-6"></div>
-      </div>
-    );
-  }
 
   if (!entry) {
     return (
-      <div className="container max-w-md mx-auto px-4 pb-24 text-center">
-        <p className="text-muted-foreground">Entry not found</p>
-        <Link to="/" className="text-primary underline mt-2 block">
-          Return to your journal
-        </Link>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center animate-pulse">Loading entry...</div>
       </div>
     );
   }
 
-  return (
-    <div className="container max-w-md mx-auto px-4 pb-24">
-      <HeaderNav>
-        <EntryActions
-          id={entry.id}
-          isFavorited={isFavorited}
-          onToggleFavorite={handleToggleFavorite}
-          onDeleteEntry={handleDeleteEntry}
-        />
-      </HeaderNav>
+  const cycleMood = () => {
+    const moods: MoodType[] = ["happy", "content", "neutral", "sad", "stressed"];
+    const currentIndex = moods.indexOf(mood || "neutral");
+    const nextIndex = (currentIndex + 1) % moods.length;
+    setMood(moods[nextIndex]);
+  };
 
-      <div className="mt-6">
-        <EntryHeading
-          title={entry.title}
-          date={new Date(entry.date)}
-          mood={entry.mood as MoodType}
-          kickCount={entry.kick_count}
-        />
-        
-        <EntryContent 
-          content={entry.content}
-          media={entry.media}
-        />
+  const renderMedia = () => {
+    if (!entry.media || entry.media.length === 0) return null;
+
+    return (
+      <div className="mt-6 mb-6 space-y-4">
+        {entry.media.map((item, index) => {
+          if (item.type === "photo") {
+            return (
+              <div key={index} className="rounded-xl overflow-hidden">
+                <img src={item.url} alt={`Attachment ${index + 1}`} className="w-full max-h-80 object-cover" />
+              </div>
+            );
+          }
+          if (item.type === "video") {
+            return (
+              <div key={index} className="rounded-xl overflow-hidden relative bg-muted/30 h-64">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <button className="w-16 h-16 rounded-full glass-morphism flex items-center justify-center">
+                    <Play className="w-8 h-8 ml-1" />
+                  </button>
+                </div>
+                <video poster="/placeholder.svg" className="w-full h-full object-cover opacity-80" />
+              </div>
+            );
+          }
+          if (item.type === "audio") {
+            return (
+              <div key={index} className="py-4 px-5 rounded-xl glass-morphism flex items-center gap-3">
+                <button 
+                  onClick={toggleAudioPlayback}
+                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"
+                >
+                  {isPlaying ? <Pause className="w-5 h-5 text-primary-foreground" /> : <Play className="w-5 h-5 ml-0.5 text-primary-foreground" />}
+                </button>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Mic className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Voice Memo</span>
+                  </div>
+                  <div className="mt-1 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
+                    <div className={`h-full bg-primary ${isPlaying ? 'animate-progress' : ''}`} style={{ width: '30%' }}></div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">0:45</div>
+              </div>
+            );
+          }
+          return null;
+        })}
       </div>
+    );
+  };
+
+  const moodColor = getMoodColor(mood);
+
+  return (
+    <div className="min-h-screen pb-24 px-4" style={{ backgroundColor: moodColor }}>
+      <header className="py-4 flex items-center justify-between mb-6 animate-slide-down">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={toggleFavorite}
+            className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
+          >
+            <Bookmark className={`w-5 h-5 transition-all duration-300 ${isFavorite ? 'fill-primary stroke-primary' : ''}`} />
+          </button>
+          <button 
+            onClick={cycleMood}
+            className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
+          >
+            {mood && (
+              <span className="flex items-center justify-center w-5 h-5 rounded-full relative z-20 text-foreground" 
+                    style={{ backgroundColor: getMoodColor(mood) }}>
+                {getMoodEmoji(mood)}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
+      
+      <main className="animate-fade-in">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-2xl font-medium tracking-tight">{entry.title}</h1>
+          </div>
+          <span className="text-sm text-muted-foreground">
+            {formatDistanceToNow(entry.date, { addSuffix: true })}
+          </span>
+        </div>
+        
+        {renderMedia()}
+        
+        <div className="prose max-w-none">
+          <p className="whitespace-pre-line leading-relaxed">
+            {entry.content}
+          </p>
+        </div>
+
+        <div className="flex items-stretch justify-between gap-3 my-4">
+          <SharingToggle 
+            isShared={isShared} 
+            onShareChange={setIsShared} 
+            className="flex-1 h-full"
+          />
+          
+          <BabyKickTracker 
+            kickCount={kickCount} 
+            onKickCountChange={setKickCount} 
+            className="flex-1 h-full"
+          />
+        </div>
+      </main>
+      
+      <BottomBar />
     </div>
   );
 };
