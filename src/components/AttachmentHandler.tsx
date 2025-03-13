@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { Camera, ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AudioRecorder from "@/components/AudioRecorder";
@@ -22,6 +22,10 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
 }) => {
   const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  
+  // References for file input elements
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleAttachment = (type: AttachmentType, url: string) => {
     const newAttachment = { type, url };
@@ -47,6 +51,12 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
     const updatedAttachments = attachments.filter((_, index) => index !== indexToRemove);
     setAttachments(updatedAttachments);
     onAttachmentsChange(updatedAttachments);
+    
+    // If removing an audio attachment, also revoke the object URL
+    const removedAttachment = attachments[indexToRemove];
+    if (removedAttachment && removedAttachment.type === "audio") {
+      URL.revokeObjectURL(removedAttachment.url);
+    }
   };
 
   const renderAttachmentPreviews = useCallback(() => {
@@ -70,7 +80,7 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
           <div key={index} className="relative mt-4">
             <AudioPlayer 
               audioUrl={attachment.url} 
-              transcript="Simulated transcript"
+              transcript="Audio recording"
             />
             <button 
               onClick={() => removeAttachment(index)}
@@ -84,17 +94,34 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
       return null;
     });
   }, [attachments]);
+
+  // Handles image files selected through input elements
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: AttachmentType) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        const imageUrl = URL.createObjectURL(file);
+        handleAttachment(type, imageUrl);
+      }
+    }
+    
+    // Reset the input
+    e.target.value = '';
+  };
   
   const handlePhotoUpload = () => {
-    // Simulate photo upload
-    const imageUrl = "/placeholder.svg";
-    handleAttachment("photo", imageUrl);
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    }
   };
 
   const handleGalleryUpload = () => {
-    // Simulate gallery upload
-    const galleryUrl = "/placeholder.svg";
-    handleAttachment("gallery", galleryUrl);
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
   };
 
   return (
@@ -121,6 +148,25 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
 
       <div className="attachments-bar pt-4 border-t border-border">
         <div className="flex justify-center gap-8">
+          {/* Hidden file inputs */}
+          <input 
+            type="file" 
+            ref={cameraInputRef}
+            accept="image/*"
+            capture="environment"
+            onChange={(e) => handleFileInputChange(e, "photo")}
+            className="hidden"
+          />
+          
+          <input 
+            type="file" 
+            ref={galleryInputRef}
+            accept="image/*"
+            multiple
+            onChange={(e) => handleFileInputChange(e, "gallery")}
+            className="hidden"
+          />
+          
           <button 
             type="button" 
             onClick={handlePhotoUpload}

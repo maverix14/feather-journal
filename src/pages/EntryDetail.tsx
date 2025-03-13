@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bookmark, Play, Pause, Mic } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getEntry } from "@/lib/journalData";
+import { getEntry, toggleFavorite, JournalEntry } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
 import BottomBar from "@/components/BottomBar";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { MoodType } from "@/components/MoodSelector";
 import BabyKickTracker from "@/components/BabyKickTracker";
 import SharingToggle from "@/components/SharingToggle";
+import AudioPlayer from "@/components/AudioPlayer";
 
 const getMoodColor = (mood: MoodType | undefined) => {
   switch (mood) {
@@ -52,6 +54,7 @@ const EntryDetail = () => {
   const [entry, setEntry] = useState<EntryProps | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioPlayingIndex, setAudioPlayingIndex] = useState<number | null>(null);
   const [mood, setMood] = useState<MoodType | undefined>(undefined);
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false);
@@ -60,25 +63,49 @@ const EntryDetail = () => {
     if (id) {
       const foundEntry = getEntry(id);
       if (foundEntry) {
-        setEntry(foundEntry);
-        setIsFavorite(foundEntry.favorite || false);
-        setMood(foundEntry.mood);
-        setKickCount(foundEntry.kickCount || 0);
-        setIsShared(foundEntry.isShared || false);
+        // Convert to EntryProps format for component
+        const formattedEntry: EntryProps = {
+          ...foundEntry,
+          date: new Date(foundEntry.date), // Convert ISO string to Date
+        };
+        
+        setEntry(formattedEntry);
+        setIsFavorite(formattedEntry.favorite || false);
+        setMood(formattedEntry.mood);
+        setKickCount(formattedEntry.kickCount || 0);
+        setIsShared(formattedEntry.isShared || false);
+      } else {
+        // Entry not found
+        toast({
+          title: "Error",
+          description: "Journal entry not found",
+          variant: "destructive",
+        });
+        navigate('/');
       }
     }
-  }, [id]);
+  }, [id, navigate, toast]);
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
+  const handleToggleFavorite = () => {
+    if (!id) return;
+    
+    const newFavoriteStatus = toggleFavorite(id);
+    setIsFavorite(newFavoriteStatus);
+    
     toast({
-      title: isFavorite ? "Removed from bookmarks" : "Added to bookmarks",
-      description: isFavorite ? "Entry removed from your bookmarks" : "Entry added to your bookmarks",
+      title: newFavoriteStatus ? "Added to bookmarks" : "Removed from bookmarks",
+      description: newFavoriteStatus ? "Entry added to your bookmarks" : "Entry removed from your bookmarks",
     });
   };
 
-  const toggleAudioPlayback = () => {
-    setIsPlaying(!isPlaying);
+  const toggleAudioPlayback = (index: number) => {
+    setAudioPlayingIndex(prev => prev === index ? null : index);
+    setIsPlaying(prev => {
+      if (audioPlayingIndex === index) {
+        return !prev;
+      }
+      return true;
+    });
   };
 
   if (!entry) {
@@ -102,11 +129,20 @@ const EntryDetail = () => {
     return (
       <div className="mt-6 mb-6 space-y-4">
         {entry.media.map((item, index) => {
-          if (item.type === "photo") {
+          if (item.type === "photo" || item.type === "gallery") {
             return (
               <div key={index} className="rounded-xl overflow-hidden">
                 <img src={item.url} alt={`Attachment ${index + 1}`} className="w-full max-h-80 object-cover" />
               </div>
+            );
+          }
+          if (item.type === "audio") {
+            return (
+              <AudioPlayer 
+                key={index}
+                audioUrl={item.url} 
+                transcript="Voice recording"
+              />
             );
           }
           if (item.type === "video") {
@@ -118,28 +154,6 @@ const EntryDetail = () => {
                   </button>
                 </div>
                 <video poster="/placeholder.svg" className="w-full h-full object-cover opacity-80" />
-              </div>
-            );
-          }
-          if (item.type === "audio") {
-            return (
-              <div key={index} className="py-4 px-5 rounded-xl glass-morphism flex items-center gap-3">
-                <button 
-                  onClick={toggleAudioPlayback}
-                  className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"
-                >
-                  {isPlaying ? <Pause className="w-5 h-5 text-primary-foreground" /> : <Play className="w-5 h-5 ml-0.5 text-primary-foreground" />}
-                </button>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Mic className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Voice Memo</span>
-                  </div>
-                  <div className="mt-1 h-1 bg-muted-foreground/20 rounded-full overflow-hidden">
-                    <div className={`h-full bg-primary ${isPlaying ? 'animate-progress' : ''}`} style={{ width: '30%' }}></div>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground">0:45</div>
               </div>
             );
           }
@@ -163,7 +177,7 @@ const EntryDetail = () => {
         
         <div className="flex items-center space-x-3">
           <button 
-            onClick={toggleFavorite}
+            onClick={handleToggleFavorite}
             className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
           >
             <Bookmark className={`w-5 h-5 transition-all duration-300 ${isFavorite ? 'fill-primary stroke-primary' : ''}`} />

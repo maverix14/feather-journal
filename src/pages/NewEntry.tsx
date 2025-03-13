@@ -10,23 +10,7 @@ import SharingToggle from "@/components/SharingToggle";
 import EntryHeading from "@/components/EntryHeading";
 import EntryTitleInput from "@/components/EntryTitleInput";
 import AttachmentHandler, { AttachmentType } from "@/components/AttachmentHandler";
-import { v4 as uuidv4 } from 'uuid';
-import { mockEntries } from "@/lib/journalData";
-
-interface NewEntryProps {
-  id: string;
-  title: string;
-  content: string;
-  date: Date;
-  favorite: boolean;
-  media: {
-    type: AttachmentType;
-    url: string;
-  }[];
-  mood?: MoodType;
-  kickCount?: number;
-  isShared?: boolean;
-}
+import { saveEntry } from "@/lib/journalStorage";
 
 const NewEntry = () => {
   const navigate = useNavigate();
@@ -72,34 +56,40 @@ const NewEntry = () => {
       return;
     }
     
-    // Create the new entry object
-    const newEntry: NewEntryProps = {
-      id: uuidv4(),
-      title: title.trim(),
-      content: content.trim(),
-      date: new Date(),
-      favorite: false,
-      media: attachments,
-      mood: mood,
-      kickCount: kickCount,
-      isShared: isShared
-    };
-    
-    console.log("Saving new entry:", newEntry);
-    
-    // In a real app, we would save to a database
-    // For now, we'll just add it to our mock data and navigate back
-    // This is just a simulation - in a real app, we'd use a proper state management system
-    
-    // Simulate successful save
-    setTimeout(() => {
+    try {
+      // Save the entry to localStorage
+      saveEntry({
+        title: title.trim(),
+        content: content.trim(),
+        date: new Date().toISOString(), // Will be overwritten by saveEntry, but included for type safety
+        favorite: false,
+        media: attachments,
+        mood: mood,
+        kickCount: kickCount,
+        isShared: isShared
+      });
+      
       toast({
         title: "Success",
         description: "Your journal entry has been saved",
       });
       
+      // Revoke any object URLs to prevent memory leaks
+      attachments.forEach(attachment => {
+        if (attachment.type === "audio" || attachment.type === "photo" || attachment.type === "gallery") {
+          URL.revokeObjectURL(attachment.url);
+        }
+      });
+      
       navigate("/");
-    }, 500);
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save your journal entry",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSharingChange = (newValue: boolean) => {
