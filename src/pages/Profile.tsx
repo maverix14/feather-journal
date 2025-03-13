@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Camera, User, Key } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import BottomBar from "@/components/BottomBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ const Profile = () => {
   
   const [name, setName] = useState(user?.name || "");
   const [profileImage, setProfileImage] = useState<string | null>(user?.avatar_url || null);
-  const [isEditing, setIsEditing] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -23,15 +22,15 @@ const Profile = () => {
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // This is a mock function since we don't have actual profile update functionality
-    // In a real app, this would update the user profile via API
+    updateProfile({
+      name,
+      avatar_url: profileImage || undefined
+    });
     
     toast({
       title: "Profile updated",
       description: "Your profile changes have been saved.",
     });
-    
-    setIsEditing(false);
   };
 
   const handlePasswordReset = (e: React.FormEvent) => {

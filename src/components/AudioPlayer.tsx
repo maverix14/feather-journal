@@ -65,7 +65,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, transcript, classNa
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play();
+        audioRef.current.play().catch(err => {
+          console.error("Error playing audio:", err);
+        });
       }
       setIsPlaying(!isPlaying);
     }

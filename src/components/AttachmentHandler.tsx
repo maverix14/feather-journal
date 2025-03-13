@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useRef } from "react";
-import { Camera, ImageIcon, X } from "lucide-react";
+import { Camera, ImageIcon, X, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AudioRecorder from "@/components/AudioRecorder";
 import AudioPlayer from "@/components/AudioPlayer";
@@ -11,6 +11,7 @@ interface AttachmentHandlerProps {
   content: string;
   setContent: React.Dispatch<React.SetStateAction<string>>;
   onAttachmentsChange: (attachments: { type: AttachmentType; url: string }[]) => void;
+  initialAttachments?: { type: AttachmentType; url: string }[];
   className?: string;
 }
 
@@ -18,9 +19,10 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
   content,
   setContent,
   onAttachmentsChange,
+  initialAttachments = [],
   className,
 }) => {
-  const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>([]);
+  const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>(initialAttachments);
   const [isRecording, setIsRecording] = useState(false);
   
   // References for file input elements

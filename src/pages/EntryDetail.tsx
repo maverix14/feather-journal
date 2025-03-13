@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { getEntry, toggleFavorite, updateEntry, JournalEntry, deleteEntry } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
 import BottomBar from "@/components/BottomBar";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { MoodType } from "@/components/MoodSelector";
 import BabyKickTracker from "@/components/BabyKickTracker";
@@ -118,6 +118,7 @@ const EntryDetail = () => {
       kickCount,
       isShared,
       date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
+      favorite: isFavorite
     };
     
     updateEntry(updatedEntry);
@@ -160,7 +161,7 @@ const EntryDetail = () => {
     setMood(moods[nextIndex]);
     
     // Save immediately on mood change
-    saveChanges();
+    setTimeout(saveChanges, 0);
   };
 
   const handleSharingChange = (shared: boolean) => {
@@ -300,6 +301,7 @@ const EntryDetail = () => {
             content={content}
             setContent={setContent}
             onAttachmentsChange={handleAttachmentsChange}
+            initialAttachments={media}
           />
         ) : (
           <>

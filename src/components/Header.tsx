@@ -40,15 +40,23 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
             className="w-10 h-10 flex items-center justify-center rounded-full glass-morphism hover:bg-white/10 transition-all duration-300"
             aria-label="User profile"
           >
-            <User className="w-5 h-5 text-foreground" />
+            {user?.avatar_url ? (
+              <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <User className="w-5 h-5 text-foreground" />
+            )}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
           <DropdownMenuItem asChild>
             <Link to="/profile" className="flex items-center cursor-pointer">
               <div className="flex items-center space-x-2 w-full">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <User className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
                 </div>
                 <span>{user?.name || "Your Profile"}</span>
               </div>

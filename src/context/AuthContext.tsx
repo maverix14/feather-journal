@@ -5,6 +5,7 @@ type User = {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string;
 };
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isGuestMode: boolean;
   sendPasswordResetEmail: (email: string) => Promise<void>;
+  updateProfile: (data: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +48,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     checkUserSession();
   }, []);
+
+  // Update user profile
+  const updateProfile = (data: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...data };
+    setUser(updatedUser);
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+  };
 
   // Mock login function - replace with real auth in production
   const login = async (email: string, password: string) => {
@@ -134,7 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isGuestMode,
-        sendPasswordResetEmail
+        sendPasswordResetEmail,
+        updateProfile
       }}
     >
       {children}
