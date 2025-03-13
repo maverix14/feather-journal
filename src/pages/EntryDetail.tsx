@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Play, Pause, Mic } from "lucide-react";
+import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getEntry, toggleFavorite, JournalEntry } from "@/lib/journalStorage";
+import { getEntry, toggleFavorite, updateEntry, JournalEntry } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
 import BottomBar from "@/components/BottomBar";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,9 @@ import { MoodType } from "@/components/MoodSelector";
 import BabyKickTracker from "@/components/BabyKickTracker";
 import SharingToggle from "@/components/SharingToggle";
 import AudioPlayer from "@/components/AudioPlayer";
+import EntryTitleInput from "@/components/EntryTitleInput";
+import AttachmentHandler from "@/components/AttachmentHandler";
+import { Link } from "react-router-dom";
 
 const getMoodColor = (mood: MoodType | undefined) => {
   switch (mood) {
@@ -53,8 +56,10 @@ const EntryDetail = () => {
   const { toast } = useToast();
   const [entry, setEntry] = useState<EntryProps | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioPlayingIndex, setAudioPlayingIndex] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [media, setMedia] = useState<any[]>([]);
   const [mood, setMood] = useState<MoodType | undefined>(undefined);
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false);
@@ -74,6 +79,9 @@ const EntryDetail = () => {
         setMood(formattedEntry.mood);
         setKickCount(formattedEntry.kickCount || 0);
         setIsShared(formattedEntry.isShared || false);
+        setTitle(formattedEntry.title);
+        setContent(formattedEntry.content);
+        setMedia(formattedEntry.media || []);
       } else {
         // Entry not found
         toast({
@@ -98,33 +106,77 @@ const EntryDetail = () => {
     });
   };
 
-  const toggleAudioPlayback = (index: number) => {
-    setAudioPlayingIndex(prev => prev === index ? null : index);
-    setIsPlaying(prev => {
-      if (audioPlayingIndex === index) {
-        return !prev;
-      }
-      return true;
+  const saveChanges = () => {
+    if (!id || !entry) return;
+    
+    const updatedEntry: JournalEntry = {
+      ...entry,
+      title: isEditing ? title : entry.title,
+      content: isEditing ? content : entry.content,
+      media: isEditing ? media : entry.media,
+      mood,
+      kickCount,
+      isShared,
+      date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
+    };
+    
+    updateEntry(updatedEntry);
+    
+    // Update local state
+    setEntry({
+      ...updatedEntry,
+      date: new Date(updatedEntry.date),
+    });
+    
+    // Exit edit mode if active
+    if (isEditing) {
+      setIsEditing(false);
+    }
+    
+    toast({
+      title: "Changes saved",
+      description: "Your journal entry has been updated",
     });
   };
-
-  if (!entry) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center animate-pulse">Loading entry...</div>
-      </div>
-    );
-  }
 
   const cycleMood = () => {
     const moods: MoodType[] = ["happy", "content", "neutral", "sad", "stressed"];
     const currentIndex = moods.indexOf(mood || "neutral");
     const nextIndex = (currentIndex + 1) % moods.length;
     setMood(moods[nextIndex]);
+    
+    // Save immediately on mood change
+    saveChanges();
+  };
+
+  const handleSharingChange = (shared: boolean) => {
+    setIsShared(shared);
+    
+    // We'll save changes immediately when sharing is toggled
+    setTimeout(saveChanges, 0);
+  };
+
+  const handleKickCountChange = (count: number) => {
+    setKickCount(count);
+    
+    // We'll save changes immediately when kick count is changed
+    setTimeout(saveChanges, 0);
+  };
+
+  const handleAttachmentsChange = (newMedia: any[]) => {
+    setMedia(newMedia);
+  };
+
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // Save changes when exiting edit mode
+      saveChanges();
+    }
+    setIsEditing(!isEditing);
   };
 
   const renderMedia = () => {
-    if (!entry.media || entry.media.length === 0) return null;
+    if (!entry?.media || entry.media.length === 0) return null;
 
     return (
       <div className="mt-6 mb-6 space-y-4">
@@ -165,6 +217,14 @@ const EntryDetail = () => {
 
   const moodColor = getMoodColor(mood);
 
+  if (!entry) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center animate-pulse">Loading entry...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-24 px-4" style={{ backgroundColor: moodColor }}>
       <header className="py-4 flex items-center justify-between mb-6 animate-slide-down">
@@ -182,6 +242,14 @@ const EntryDetail = () => {
           >
             <Bookmark className={`w-5 h-5 transition-all duration-300 ${isFavorite ? 'fill-primary stroke-primary' : ''}`} />
           </button>
+          
+          <button 
+            onClick={toggleEditMode}
+            className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
+          >
+            <Pencil className={`w-5 h-5 transition-all duration-300 ${isEditing ? 'text-primary' : ''}`} />
+          </button>
+          
           <button 
             onClick={cycleMood}
             className="w-10 h-10 rounded-full neo-shadow hover:neo-inset transition-all duration-300 flex items-center justify-center"
@@ -198,35 +266,63 @@ const EntryDetail = () => {
       
       <main className="animate-fade-in">
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-1">
-            <h1 className="text-2xl font-medium tracking-tight">{entry.title}</h1>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {formatDistanceToNow(entry.date, { addSuffix: true })}
-          </span>
+          {isEditing ? (
+            <EntryTitleInput
+              title={title}
+              setTitle={setTitle}
+            />
+          ) : (
+            <div>
+              <h1 className="text-2xl font-medium tracking-tight">{entry.title}</h1>
+              <span className="text-sm text-muted-foreground">
+                {formatDistanceToNow(entry.date, { addSuffix: true })}
+              </span>
+            </div>
+          )}
         </div>
         
-        {renderMedia()}
-        
-        <div className="prose max-w-none">
-          <p className="whitespace-pre-line leading-relaxed">
-            {entry.content}
-          </p>
-        </div>
+        {isEditing ? (
+          <AttachmentHandler
+            content={content}
+            setContent={setContent}
+            onAttachmentsChange={handleAttachmentsChange}
+          />
+        ) : (
+          <>
+            {renderMedia()}
+            
+            <div className="prose max-w-none">
+              <p className="whitespace-pre-line leading-relaxed">
+                {entry.content}
+              </p>
+            </div>
+          </>
+        )}
 
         <div className="flex items-stretch justify-between gap-3 my-4">
           <SharingToggle 
             isShared={isShared} 
-            onShareChange={setIsShared} 
+            onShareChange={handleSharingChange} 
             className="flex-1 h-full"
           />
           
           <BabyKickTracker 
             kickCount={kickCount} 
-            onKickCountChange={setKickCount} 
+            onKickCountChange={handleKickCountChange} 
             className="flex-1 h-full"
           />
         </div>
+        
+        {isEditing && (
+          <div className="mt-6 flex justify-end">
+            <button 
+              onClick={saveChanges}
+              className="px-4 py-2 rounded-lg bg-primary text-white font-medium"
+            >
+              Save Changes
+            </button>
+          </div>
+        )}
       </main>
       
       <BottomBar />

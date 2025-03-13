@@ -122,9 +122,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         <button
           type="button"
           onClick={startRecording}
-          className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary hover:bg-secondary/80 transition-all duration-200"
+          className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 transition-all hover:bg-primary/20"
         >
-          <Mic className="w-5 h-5 text-primary" />
+          <Mic className="w-4 h-4 text-primary" />
         </button>
         <div className="w-full h-px bg-border mt-3"></div>
       </div>
@@ -133,8 +133,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   
   return (
     <div className={cn(
-      "w-full rounded-lg transition-all duration-300",
-      isTranscribing ? "bg-primary/5" : "bg-secondary",
+      "w-full rounded-lg transition-all duration-300 neo-shadow",
+      isTranscribing ? "bg-primary/5" : "bg-secondary/50",
       className
     )}>
       {isTranscribing ? (
@@ -161,24 +161,20 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             <span className="text-sm font-medium">{formatTime(duration)}</span>
           </div>
           
-          <div className="h-14 bg-black/5 rounded-md flex items-center justify-center mb-3 overflow-hidden">
-            <div className="flex space-x-1 items-center h-10 px-2 w-full">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div 
-                  key={i}
-                  className={cn(
-                    "bg-primary h-full w-1 rounded-full",
-                    isPaused ? "" : "animate-pulse",
-                    i % 2 === 0 ? "h-8" : "h-4",
-                    i % 3 === 0 ? "h-10" : ""
-                  )}
-                  style={{ 
-                    animationDelay: `${i * 0.1}s`,
-                    animationDuration: `${0.7 + (i % 3) * 0.2}s` 
-                  }}
-                />
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-1 mb-2">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div 
+                key={i}
+                className={cn(
+                  "bg-primary h-6 w-0.5 rounded-full transition-all",
+                  isPaused ? "" : "animate-sound-wave"
+                )}
+                style={{ 
+                  animationDelay: `${i * 0.05}s`,
+                  height: `${Math.sin(i * 0.4) * 16 + 8}px`
+                }}
+              />
+            ))}
           </div>
           
           <div className="flex items-center justify-between">
@@ -186,26 +182,26 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
               onClick={handleCancel}
               className="p-2 rounded-full hover:bg-black/5 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
             
             <div className="flex items-center space-x-4">
               <button 
                 onClick={isPaused ? resumeRecording : pauseRecording}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/50 hover:bg-white/70 glass-morphism"
               >
                 {isPaused ? (
-                  <Mic className="w-5 h-5" />
+                  <Mic className="w-4 h-4" />
                 ) : (
-                  <Pause className="w-5 h-5" />
+                  <Pause className="w-4 h-4" />
                 )}
               </button>
               
               <button 
                 onClick={stopRecording}
-                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5"
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/20 hover:bg-primary/30 glass-morphism"
               >
-                <StopCircle className="w-5 h-5" />
+                <StopCircle className="w-4 h-4 text-primary" />
               </button>
             </div>
           </div>

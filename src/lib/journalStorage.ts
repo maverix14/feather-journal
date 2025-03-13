@@ -53,6 +53,11 @@ export const saveEntry = (entry: Omit<JournalEntry, 'id'>): JournalEntry => {
     date: new Date().toISOString(), // Ensure date is stored as string
   };
   
+  // Make sure we have default values for optional fields
+  if (newEntry.mood === undefined) newEntry.mood = null;
+  if (newEntry.kickCount === undefined) newEntry.kickCount = 0;
+  if (newEntry.isShared === undefined) newEntry.isShared = false;
+  
   localStorage.setItem(JOURNAL_ENTRIES_KEY, JSON.stringify([newEntry, ...entries]));
   return newEntry;
 };
@@ -95,4 +100,46 @@ export const toggleFavorite = (id: string): boolean => {
 export const getFavorites = (): JournalEntry[] => {
   const entries = getAllEntries();
   return entries.filter(entry => entry.favorite);
+};
+
+// Update mood
+export const updateMood = (id: string, mood: MoodType): boolean => {
+  const entry = getEntry(id);
+  if (!entry) return false;
+  
+  const updatedEntry = { 
+    ...entry, 
+    mood 
+  };
+  
+  updateEntry(updatedEntry);
+  return true;
+};
+
+// Update sharing status
+export const updateSharing = (id: string, isShared: boolean): boolean => {
+  const entry = getEntry(id);
+  if (!entry) return false;
+  
+  const updatedEntry = { 
+    ...entry, 
+    isShared 
+  };
+  
+  updateEntry(updatedEntry);
+  return true;
+};
+
+// Update kick count
+export const updateKickCount = (id: string, kickCount: number): boolean => {
+  const entry = getEntry(id);
+  if (!entry) return false;
+  
+  const updatedEntry = { 
+    ...entry, 
+    kickCount 
+  };
+  
+  updateEntry(updatedEntry);
+  return true;
 };

@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect } from "react";
 import { Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,28 +14,45 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, transcript, classNa
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const circleRef = useRef<SVGCircleElement | null>(null);
+  const progressRef = useRef<HTMLDivElement | null>(null);
   
   useEffect(() => {
-    if (isPlaying && audioRef.current) {
-      const updateTime = () => {
-        if (audioRef.current) {
-          setCurrentTime(audioRef.current.currentTime);
-          
-          // Update circle progress
-          if (circleRef.current && audioRef.current.duration) {
-            const progress = audioRef.current.currentTime / audioRef.current.duration;
-            const circumference = 2 * Math.PI * 18; // Circle radius is 18
-            const dashOffset = circumference * (1 - progress);
-            circleRef.current.style.strokeDashoffset = `${dashOffset}`;
-          }
-        }
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      
+      const handleLoadedMetadata = () => {
+        setDuration(audio.duration);
       };
       
-      const interval = setInterval(updateTime, 50);
-      return () => clearInterval(interval);
+      const handleTimeUpdate = () => {
+        setCurrentTime(audio.currentTime);
+        updateProgressBar();
+      };
+      
+      const handleEnded = () => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        updateProgressBar();
+      };
+      
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('ended', handleEnded);
+      
+      return () => {
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        audio.removeEventListener('ended', handleEnded);
+      };
     }
-  }, [isPlaying]);
+  }, [audioRef]);
+  
+  const updateProgressBar = () => {
+    if (audioRef.current && progressRef.current && duration > 0) {
+      const progress = (audioRef.current.currentTime / duration) * 100;
+      progressRef.current.style.width = `${progress}%`;
+    }
+  };
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -52,81 +70,63 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioUrl, transcript, classNa
       setIsPlaying(!isPlaying);
     }
   };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
+  
+  const handleProgressBarClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (audioRef.current && duration > 0) {
+      const progressBar = e.currentTarget;
+      const rect = progressBar.getBoundingClientRect();
+      const clickPosition = e.clientX - rect.left;
+      const progressBarWidth = rect.width;
+      
+      const seekTime = (clickPosition / progressBarWidth) * duration;
+      audioRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
+      updateProgressBar();
     }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const calculateCircleProgress = () => {
-    if (duration === 0) return "0";
-    const progress = currentTime / duration;
-    const circumference = 2 * Math.PI * 18; // Circle radius is 18
-    return `${circumference * (1 - progress)}`;
   };
 
   return (
-    <div className={cn("flex items-start gap-3 p-3 bg-secondary/50 rounded-lg", className)}>
-      <div className="relative">
-        <button 
-          onClick={togglePlayback}
-          className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center"
-        >
-          {isPlaying ? (
-            <Pause className="w-5 h-5 text-primary" />
-          ) : (
-            <Play className="w-5 h-5 text-primary" />
-          )}
-        </button>
-        <svg 
-          width="44" 
-          height="44" 
-          viewBox="0 0 44 44" 
-          className="absolute top-0 left-0 -rotate-90"
-        >
-          <circle
-            cx="22"
-            cy="22"
-            r="18"
-            fill="none"
-            stroke="rgba(0,0,0,0.1)"
-            strokeWidth="3"
-          />
-          <circle
-            ref={circleRef}
-            cx="22"
-            cy="22"
-            r="18"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeDasharray={`${2 * Math.PI * 18}`}
-            strokeDashoffset={calculateCircleProgress()}
-            className="text-primary"
-          />
-        </svg>
-        <audio 
-          ref={audioRef} 
-          src={audioUrl} 
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={() => setIsPlaying(false)}
-        />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm line-clamp-2">{transcript}</p>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-xs text-muted-foreground">{formatTime(currentTime)}</span>
-          <span className="text-xs text-muted-foreground">{formatTime(duration || 30)}</span>
+    <div className={cn("neo-shadow rounded-lg overflow-hidden", className)}>
+      <div className="p-3 bg-secondary/30">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={togglePlayback}
+            className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+          >
+            {isPlaying ? (
+              <Pause className="w-4 h-4 text-primary" />
+            ) : (
+              <Play className="w-4 h-4 text-primary ml-0.5" />
+            )}
+          </button>
+          
+          <div className="flex-1">
+            <p className="text-sm mb-1 line-clamp-1">{transcript}</p>
+            
+            <div 
+              className="h-2 bg-secondary rounded-full cursor-pointer"
+              onClick={handleProgressBarClick}
+            >
+              <div 
+                ref={progressRef}
+                className="h-full bg-primary/60 rounded-full"
+                style={{ width: `${(currentTime / duration) * 100}%` }}
+              ></div>
+            </div>
+            
+            <div className="flex justify-between mt-1 text-xs text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration || 0)}</span>
+            </div>
+          </div>
         </div>
       </div>
+      
+      <audio 
+        ref={audioRef} 
+        src={audioUrl}
+        preload="metadata"
+      />
     </div>
   );
 };
