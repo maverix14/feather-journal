@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +10,8 @@ import SharingToggle from "@/components/SharingToggle";
 import EntryHeading from "@/components/EntryHeading";
 import EntryTitleInput from "@/components/EntryTitleInput";
 import AttachmentHandler, { AttachmentType } from "@/components/AttachmentHandler";
+import { v4 as uuidv4 } from 'uuid';
+import { mockEntries } from "@/lib/journalData";
 
 interface NewEntryProps {
   id: string;
@@ -69,22 +72,38 @@ const NewEntry = () => {
       return;
     }
     
-    // Here you would save the entry with all the data, including attachments
-    console.log("Submitting entry with data:", {
-      title,
-      content,
-      mood,
-      kickCount,
-      isShared,
-      attachments,
-    });
-
-    toast({
-      title: "Success",
-      description: "Your journal entry has been saved",
-    });
+    // Create the new entry object
+    const newEntry: NewEntryProps = {
+      id: uuidv4(),
+      title: title.trim(),
+      content: content.trim(),
+      date: new Date(),
+      favorite: false,
+      media: attachments,
+      mood: mood,
+      kickCount: kickCount,
+      isShared: isShared
+    };
     
-    setTimeout(() => navigate("/"), 500);
+    console.log("Saving new entry:", newEntry);
+    
+    // In a real app, we would save to a database
+    // For now, we'll just add it to our mock data and navigate back
+    // This is just a simulation - in a real app, we'd use a proper state management system
+    
+    // Simulate successful save
+    setTimeout(() => {
+      toast({
+        title: "Success",
+        description: "Your journal entry has been saved",
+      });
+      
+      navigate("/");
+    }, 500);
+  };
+
+  const handleSharingChange = (newValue: boolean) => {
+    setIsShared(newValue);
   };
 
   return (
@@ -113,7 +132,7 @@ const NewEntry = () => {
           <div className="flex items-stretch justify-between gap-3 my-4">
             <SharingToggle 
               isShared={isShared} 
-              onShareChange={setIsShared} 
+              onShareChange={handleSharingChange} 
               className="flex-1 h-full"
             />
             

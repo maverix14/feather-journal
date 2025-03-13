@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -6,6 +7,10 @@ import { cn } from "@/lib/utils";
 
 interface EntryHeadingProps {
   handleSubmit: (e: React.FormEvent) => void;
+  title?: string;
+  date?: Date;
+  mood?: string;
+  kickCount?: number;
 }
 
 const EntryHeading: React.FC<EntryHeadingProps> = ({ handleSubmit }) => {

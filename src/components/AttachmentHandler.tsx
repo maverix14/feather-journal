@@ -1,10 +1,11 @@
+
 import React, { useState, useCallback } from "react";
 import { Camera, ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AudioRecorder from "@/components/AudioRecorder";
 import AudioPlayer from "@/components/AudioPlayer";
 
-export type AttachmentType = "photo" | "gallery" | "audio";
+export type AttachmentType = "photo" | "gallery" | "audio" | "video";
 
 interface AttachmentHandlerProps {
   content: string;
@@ -23,9 +24,10 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
   const [isRecording, setIsRecording] = useState(false);
 
   const handleAttachment = (type: AttachmentType, url: string) => {
-    const newAttachment = { type: type, url: url };
-    setAttachments(prev => [...prev, newAttachment]);
-    onAttachmentsChange([...attachments, newAttachment]);
+    const newAttachment = { type, url };
+    const updatedAttachments = [...attachments, newAttachment];
+    setAttachments(updatedAttachments);
+    onAttachmentsChange(updatedAttachments);
   };
 
   const handleAudioComplete = (audioUrl: string, transcript: string) => {
@@ -42,8 +44,9 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
   };
 
   const removeAttachment = (indexToRemove: number) => {
-    setAttachments(prev => prev.filter((_, index) => index !== indexToRemove));
-    onAttachmentsChange(attachments.filter((_, index) => index !== indexToRemove));
+    const updatedAttachments = attachments.filter((_, index) => index !== indexToRemove);
+    setAttachments(updatedAttachments);
+    onAttachmentsChange(updatedAttachments);
   };
 
   const renderAttachmentPreviews = useCallback(() => {
@@ -80,7 +83,7 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
       }
       return null;
     });
-  }, [attachments, removeAttachment]);
+  }, [attachments]);
   
   const handlePhotoUpload = () => {
     // Simulate photo upload
