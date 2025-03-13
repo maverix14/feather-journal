@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil } from "lucide-react";
+import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getEntry, toggleFavorite, updateEntry, JournalEntry } from "@/lib/journalStorage";
+import { getEntry, toggleFavorite, updateEntry, JournalEntry, deleteEntry } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
 import BottomBar from "@/components/BottomBar";
 import { useToast } from "@/hooks/use-toast";
@@ -137,6 +137,20 @@ const EntryDetail = () => {
       title: "Changes saved",
       description: "Your journal entry has been updated",
     });
+  };
+
+  const handleDeleteEntry = () => {
+    if (!id) return;
+    
+    // Delete the entry and navigate back
+    deleteEntry(id);
+    
+    toast({
+      title: "Entry deleted",
+      description: "Your journal entry has been permanently deleted",
+    });
+    
+    navigate('/');
   };
 
   const cycleMood = () => {
@@ -313,8 +327,15 @@ const EntryDetail = () => {
           />
         </div>
         
-        {isEditing && (
-          <div className="mt-6 flex justify-end">
+        {isEditing ? (
+          <div className="mt-6 flex justify-between">
+            <button 
+              onClick={handleDeleteEntry}
+              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-medium"
+            >
+              Delete Entry
+            </button>
+            
             <button 
               onClick={saveChanges}
               className="px-4 py-2 rounded-lg bg-primary text-white font-medium"
@@ -322,7 +343,7 @@ const EntryDetail = () => {
               Save Changes
             </button>
           </div>
-        )}
+        ) : null}
       </main>
       
       <BottomBar />

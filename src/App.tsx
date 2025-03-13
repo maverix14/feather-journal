@@ -21,6 +21,7 @@ const BabyHealth = lazy(() => import("./pages/BabyHealth"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Insights = lazy(() => import("./pages/Insights"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,11 @@ const App = () => (
               <Route path="/insights" element={
                 <ProtectedRoute>
                   <Insights />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } />
               

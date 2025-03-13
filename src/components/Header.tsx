@@ -44,9 +44,16 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel>
-            {user?.name || "My Account"}
-          </DropdownMenuLabel>
+          <DropdownMenuItem asChild>
+            <Link to="/profile" className="flex items-center cursor-pointer">
+              <div className="flex items-center space-x-2 w-full">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <User className="w-4 h-4" />
+                </div>
+                <span>{user?.name || "Your Profile"}</span>
+              </div>
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <Link to="/bookmarks" className="flex items-center cursor-pointer">
