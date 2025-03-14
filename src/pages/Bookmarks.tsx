@@ -1,11 +1,25 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomBar from "@/components/BottomBar";
 import EntryCard from "@/components/EntryCard";
-import { getFavorites } from "@/lib/journalData";
+import { getFavorites } from "@/lib/journalStorage";
+import { JournalEntry } from "@/lib/journalStorage";
 
 const Bookmarks = () => {
-  const [bookmarks] = useState(getFavorites());
+  const [bookmarks, setBookmarks] = useState<JournalEntry[]>([]);
+
+  useEffect(() => {
+    // Get bookmarks from storage when component mounts
+    setBookmarks(getFavorites());
+
+    // Set up an interval to refresh bookmarks periodically
+    const intervalId = setInterval(() => {
+      setBookmarks(getFavorites());
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <div className="min-h-screen pb-24 px-4">

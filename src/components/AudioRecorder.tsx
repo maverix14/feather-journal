@@ -19,8 +19,12 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioLevels, setAudioLevels] = useState<number[]>(Array(30).fill(0.5));
   
   const recorderServiceRef = useRef<AudioRecorderService | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   
   useEffect(() => {
     // Initialize recorder service
@@ -30,6 +34,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       // Clean up on unmount
       if (recorderServiceRef.current) {
         recorderServiceRef.current.cancelRecording();
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
     };
   }, []);
@@ -49,6 +56,38 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }
     };
   }, [isRecording, isPaused]);
+
+  const updateAudioVisualization = () => {
+    if (!analyserRef.current || !dataArrayRef.current || isPaused) {
+      return;
+    }
+
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+    
+    // Calculate audio levels from the frequency data
+    const bufferLength = dataArrayRef.current.length;
+    const levelsCount = 30; // Number of bars in our visualization
+    const newLevels = Array(levelsCount).fill(0);
+    
+    // Sample from the frequency data to create levels
+    for (let i = 0; i < levelsCount; i++) {
+      const startIndex = Math.floor((i / levelsCount) * bufferLength);
+      const endIndex = Math.floor(((i + 1) / levelsCount) * bufferLength);
+      let sum = 0;
+      
+      for (let j = startIndex; j < endIndex; j++) {
+        sum += dataArrayRef.current[j];
+      }
+      
+      // Normalize to 0-1 range
+      newLevels[i] = (sum / (endIndex - startIndex)) / 255;
+    }
+    
+    setAudioLevels(newLevels);
+    
+    // Continue the animation loop
+    animationFrameRef.current = requestAnimationFrame(updateAudioVisualization);
+  };
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -59,7 +98,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const startRecording = async () => {
     try {
       if (recorderServiceRef.current) {
-        await recorderServiceRef.current.startRecording();
+        const { stream, audioContext, analyser } = await recorderServiceRef.current.startRecording();
+        
+        // Set up analyser for visualization
+        analyserRef.current = analyser;
+        const bufferLength = analyser.frequencyBinCount;
+        dataArrayRef.current = new Uint8Array(bufferLength);
+        
+        // Start animation loop
+        animationFrameRef.current = requestAnimationFrame(updateAudioVisualization);
+        
         setIsRecording(true);
         setIsPaused(false);
         setDuration(0);
@@ -74,6 +122,12 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (recorderServiceRef.current) {
       recorderServiceRef.current.pauseRecording();
       setIsPaused(true);
+      
+      // Stop animation loop when paused
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     }
   };
   
@@ -81,6 +135,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (recorderServiceRef.current) {
       recorderServiceRef.current.resumeRecording();
       setIsPaused(false);
+      
+      // Resume animation loop
+      if (!animationFrameRef.current) {
+        animationFrameRef.current = requestAnimationFrame(updateAudioVisualization);
+      }
     }
   };
   
@@ -91,6 +150,12 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       setIsRecording(false);
       setIsPaused(false);
       setIsTranscribing(true);
+      
+      // Stop animation loop
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
       
       const { audioUrl, blob } = await recorderServiceRef.current.stopRecording();
       
@@ -110,6 +175,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (recorderServiceRef.current) {
       recorderServiceRef.current.cancelRecording();
     }
+    
+    // Stop animation loop
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
     setIsRecording(false);
     setIsPaused(false);
     setIsTranscribing(false);
@@ -161,17 +233,20 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             <span className="text-sm font-medium">{formatTime(duration)}</span>
           </div>
           
-          <div className="flex items-center justify-center gap-1 mb-2">
-            {Array.from({ length: 30 }).map((_, i) => (
+          <div className="flex items-center justify-center gap-1 mb-2 h-16">
+            {audioLevels.map((level, i) => (
               <div 
                 key={i}
                 className={cn(
-                  "bg-primary h-6 w-0.5 rounded-full transition-all",
-                  isPaused ? "" : "animate-sound-wave"
+                  "bg-primary rounded-full transition-all",
+                  isPaused ? "" : ""
                 )}
                 style={{ 
-                  animationDelay: `${i * 0.05}s`,
-                  height: `${Math.sin(i * 0.4) * 16 + 8}px`
+                  width: "2px",
+                  height: `${Math.max(4, level * 64)}px`,
+                  transform: isPaused ? "none" : `scaleY(${0.6 + Math.sin(i * 0.2) * 0.4})`,
+                  transformOrigin: "bottom",
+                  transition: "transform 50ms ease"
                 }}
               />
             ))}

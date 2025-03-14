@@ -1,11 +1,20 @@
 
 import React, { useState } from "react";
 import Logo from "@/components/Logo";
-import { ChevronLeft, LogIn, UserPlus, Lock, Mail } from "lucide-react";
+import { ChevronLeft, LogIn, UserPlus, Lock, Mail, Info } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,6 +23,7 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
   const navigate = useNavigate();
   const { login, signup, sendPasswordResetEmail } = useAuth();
 
@@ -56,12 +66,18 @@ const Auth = () => {
   };
 
   const handleSkipLogin = () => {
+    // Show warning dialog instead of immediately using guest mode
+    setShowGuestWarning(true);
+  };
+  
+  const confirmGuestMode = () => {
     // Use guest mode - set localStorage flag
     localStorage.setItem("guestMode", "true");
     toast({
       title: "Using guest mode",
       description: "Your data will be stored locally on this device only.",
     });
+    setShowGuestWarning(false);
     navigate("/");
   };
 
@@ -227,6 +243,59 @@ const Auth = () => {
           </div>
         </div>
       </main>
+      
+      {/* Guest Mode Warning Dialog */}
+      <Dialog open={showGuestWarning} onOpenChange={setShowGuestWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-amber-500" />
+              Guest Mode Information
+            </DialogTitle>
+            <DialogDescription>
+              Please read this important information before proceeding with guest mode.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <h3 className="font-medium">Benefits of Creating an Account:</h3>
+              <ul className="list-disc list-inside text-sm space-y-1 pl-2">
+                <li>Access your journal from any device</li>
+                <li>Never lose your entries if your device is lost or damaged</li>
+                <li>Share your journey securely with loved ones</li>
+                <li>Get personalized recommendations and insights</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-medium">Guest Mode Limitations:</h3>
+              <ul className="list-disc list-inside text-sm space-y-1 pl-2">
+                <li>Data is stored <b>only on this device</b></li>
+                <li>Entries will be <b>lost if browser data is cleared</b></li>
+                <li>Cannot access your journal from other devices</li>
+                <li>Limited sharing capabilities</li>
+              </ul>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex sm:flex-row sm:justify-between gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowGuestWarning(false)}
+              className="sm:flex-1"
+            >
+              Go Back & Sign Up
+            </Button>
+            <Button 
+              onClick={confirmGuestMode}
+              className="sm:flex-1"
+            >
+              Continue as Guest
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

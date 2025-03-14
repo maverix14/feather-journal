@@ -8,12 +8,25 @@ export class AudioRecorderService {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
 
   // Start recording
-  async startRecording(): Promise<void> {
+  async startRecording(): Promise<{
+    stream: MediaStream;
+    audioContext: AudioContext;
+    analyser: AnalyserNode;
+  }> {
     try {
       // Request microphone access
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Set up audio context and analyser for visualization
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = this.audioContext.createMediaStreamSource(this.stream);
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      source.connect(this.analyser);
       
       // Create media recorder
       this.mediaRecorder = new MediaRecorder(this.stream);
@@ -28,6 +41,12 @@ export class AudioRecorderService {
       
       // Start recording
       this.mediaRecorder.start();
+      
+      return {
+        stream: this.stream,
+        audioContext: this.audioContext,
+        analyser: this.analyser
+      };
     } catch (error) {
       console.error('Error starting audio recording:', error);
       throw error;
@@ -67,6 +86,16 @@ export class AudioRecorderService {
           this.stream = null;
         }
         
+        // Clean up audio context
+        if (this.audioContext) {
+          // Close the audio context if it's running
+          if (this.audioContext.state !== 'closed') {
+            this.audioContext.close().catch(console.error);
+          }
+          this.audioContext = null;
+          this.analyser = null;
+        }
+        
         resolve({ audioUrl, blob: audioBlob });
       };
 
@@ -88,6 +117,16 @@ export class AudioRecorderService {
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
+    }
+    
+    // Clean up audio context
+    if (this.audioContext) {
+      // Close the audio context if it's running
+      if (this.audioContext.state !== 'closed') {
+        this.audioContext.close().catch(console.error);
+      }
+      this.audioContext = null;
+      this.analyser = null;
     }
     
     this.audioChunks = [];

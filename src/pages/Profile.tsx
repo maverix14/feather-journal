@@ -64,6 +64,16 @@ const Profile = () => {
       // Create a preview URL for the image
       const imageUrl = URL.createObjectURL(file);
       setProfileImage(imageUrl);
+      
+      // Save the profile image immediately
+      updateProfile({
+        avatar_url: imageUrl
+      });
+      
+      toast({
+        title: "Profile image updated",
+        description: "Your profile image has been saved.",
+      });
     }
   };
 
