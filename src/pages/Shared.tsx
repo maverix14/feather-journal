@@ -12,40 +12,28 @@ import { Plus, Users, Mail, Link as LinkIcon, UserPlus, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import GroupFeed from "@/components/GroupFeed";
-import { SharingGroup } from "@/components/SharingToggle";
+import { 
+  getAllGroups, 
+  createGroup, 
+  deleteGroup, 
+  addMemberToGroup, 
+  InnerCircleGroup 
+} from "@/lib/journalStorage";
 
 // Inner Circle (formerly Shared) component
 const InnerCircle = () => {
-  const [groups, setGroups] = useState<SharingGroup[]>([]);
+  const [groups, setGroups] = useState<InnerCircleGroup[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState<SharingGroup | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<InnerCircleGroup | null>(null);
   const { isAuthenticated, isGuestMode } = useAuth();
   const { toast } = useToast();
 
-  // Load groups from localStorage
+  // Load groups from storage
   useEffect(() => {
-    const storedGroups = localStorage.getItem('innerCircleGroups');
-    if (storedGroups) {
-      setGroups(JSON.parse(storedGroups));
-    } else {
-      // Default groups if none exist
-      const defaultGroups = [
-        { id: "1", name: "Family", memberCount: 0 },
-        { id: "2", name: "Friends", memberCount: 0 },
-        { id: "3", name: "Partner", memberCount: 0 },
-      ];
-      setGroups(defaultGroups);
-      localStorage.setItem('innerCircleGroups', JSON.stringify(defaultGroups));
-    }
+    const storedGroups = getAllGroups();
+    setGroups(storedGroups);
   }, []);
-
-  // Save groups to localStorage when they change
-  useEffect(() => {
-    if (groups.length > 0) {
-      localStorage.setItem('innerCircleGroups', JSON.stringify(groups));
-    }
-  }, [groups]);
 
   const handleCreateGroup = () => {
     if (!newGroupName.trim()) {
@@ -66,13 +54,10 @@ const InnerCircle = () => {
       return;
     }
 
-    // In a real app, this would save to a database
-    const newGroup = {
-      id: Date.now().toString(),
-      name: newGroupName,
-      memberCount: 0,
-    };
+    // Create new group in storage
+    const newGroup = createGroup(newGroupName);
 
+    // Update UI
     setGroups([...groups, newGroup]);
     setNewGroupName("");
     setIsCreatingGroup(false);
@@ -84,12 +69,60 @@ const InnerCircle = () => {
   };
 
   const handleDeleteGroup = (id: string) => {
+    // Delete group from storage
+    deleteGroup(id);
+    
+    // Update UI
     setGroups(groups.filter(group => group.id !== id));
     
     toast({
       title: "Group deleted",
       description: "Your group has been deleted",
     });
+  };
+
+  const handleInviteMember = (groupId: string, email: string) => {
+    if (!email || !email.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    // Add member to group in storage
+    const success = addMemberToGroup(groupId, email);
+    
+    if (success) {
+      // Update UI
+      const updatedGroups = groups.map(group => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            memberCount: (group.memberCount || 0) + 1
+          };
+        }
+        return group;
+      });
+      
+      setGroups(updatedGroups);
+      
+      toast({
+        title: "Invitation sent",
+        description: `Invitation has been sent to ${email}`,
+      });
+      
+      return true;
+    } else {
+      toast({
+        title: "Error",
+        description: "This email is already a member of the group",
+        variant: "destructive",
+      });
+      
+      return false;
+    }
   };
 
   const renderGroupCreation = () => {
@@ -190,6 +223,12 @@ const InnerCircle = () => {
                       variant="outline" 
                       size="sm" 
                       className="flex-1 flex items-center justify-center gap-1"
+                      onClick={() => {
+                        const email = prompt("Enter email address to invite:");
+                        if (email) {
+                          handleInviteMember(group.id, email);
+                        }
+                      }}
                     >
                       <Mail className="w-3 h-3" />
                       Invite
@@ -198,6 +237,14 @@ const InnerCircle = () => {
                       variant="outline" 
                       size="sm" 
                       className="flex-1 flex items-center justify-center gap-1"
+                      onClick={() => {
+                        const link = `https://app.example.com/join-group/${group.id}/${Date.now()}`;
+                        navigator.clipboard.writeText(link);
+                        toast({
+                          title: "Link copied",
+                          description: "Group invite link copied to clipboard"
+                        });
+                      }}
                     >
                       <LinkIcon className="w-3 h-3" />
                       Share Link
@@ -220,10 +267,9 @@ const InnerCircle = () => {
                 </CardContent>
               </Card>
             )}
-          </div>
-          
-          <div className="mt-8">
-            <AdCard variant="medium" />
+
+            {/* Show ad after groups list */}
+            <AdCard variant="medium" className="mt-4" />
           </div>
         </main>
         <BottomBar />

@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getAllGroups, createGroup, deleteGroup } from "@/lib/journalStorage";
 
 // Define group type
 export interface SharingGroup {
@@ -44,29 +45,11 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   
-  // Load groups from localStorage
+  // Load groups
   useEffect(() => {
-    const storedGroups = localStorage.getItem('innerCircleGroups');
-    if (storedGroups) {
-      setGroups(JSON.parse(storedGroups));
-    } else {
-      // Default groups if none exist
-      const defaultGroups = [
-        { id: "1", name: "Family", memberCount: 0 },
-        { id: "2", name: "Friends", memberCount: 0 },
-        { id: "3", name: "Partner", memberCount: 0 },
-      ];
-      setGroups(defaultGroups);
-      localStorage.setItem('innerCircleGroups', JSON.stringify(defaultGroups));
-    }
+    const storedGroups = getAllGroups();
+    setGroups(storedGroups);
   }, []);
-
-  // Save groups to localStorage when they change
-  useEffect(() => {
-    if (groups.length > 0) {
-      localStorage.setItem('innerCircleGroups', JSON.stringify(groups));
-    }
-  }, [groups]);
   
   const handleToggleShare = () => {
     if (!isShared) {
@@ -123,12 +106,9 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
     }
     
     // Create new group
-    const newGroup = {
-      id: Date.now().toString(),
-      name: newGroupName,
-      memberCount: 0,
-    };
+    const newGroup = createGroup(newGroupName);
 
+    // Update UI
     setGroups([...groups, newGroup]);
     setNewGroupName("");
     setIsCreatingGroup(false);
@@ -140,8 +120,17 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
   };
   
   const removeGroup = (id: string) => {
+    // Delete group from storage
+    deleteGroup(id);
+    
+    // Update UI
     setGroups(groups.filter(group => group.id !== id));
     setSelectedGroups(selectedGroups.filter(groupId => groupId !== id));
+    
+    toast({
+      title: "Group deleted",
+      description: "Your group has been deleted",
+    });
   };
 
   return (

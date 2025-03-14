@@ -7,6 +7,7 @@ import { MoodType } from "./MoodSelector";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { addComment, toggleLike } from "@/lib/journalStorage";
 
 export interface GroupEntryProps {
   id: string;
@@ -108,6 +109,10 @@ const GroupEntryCard: React.FC<GroupEntryCardProps> = ({
   };
   
   const handleToggleLike = () => {
+    // Update storage
+    const isNowLiked = toggleLike(entry.entryId, currentUser);
+    
+    // Update UI
     if (isLiked) {
       setEntryLikes(entryLikes.filter(id => id !== currentUser));
     } else {
@@ -118,22 +123,23 @@ const GroupEntryCard: React.FC<GroupEntryCardProps> = ({
         description: "You liked this memory",
       });
     }
-    
-    // In a real app, this would be saved to the database
-    console.log("Like toggled for entry", entry.id);
   };
   
   const handleAddComment = () => {
     if (!comment.trim()) return;
     
-    const newComment = {
-      id: Date.now().toString(),
-      author: currentUser,
-      content: comment,
-      date: new Date(),
+    // Add comment to storage
+    const newComment = addComment(entry.entryId, currentUser, comment);
+    
+    // Update UI
+    const formattedComment = {
+      id: newComment.id,
+      author: newComment.author,
+      content: newComment.content,
+      date: new Date(newComment.date)
     };
     
-    setEntryComments([...entryComments, newComment]);
+    setEntryComments([...entryComments, formattedComment]);
     setComment("");
     setShowComments(true);
     
@@ -141,9 +147,6 @@ const GroupEntryCard: React.FC<GroupEntryCardProps> = ({
       title: "Comment added",
       description: "Your comment was added successfully",
     });
-    
-    // In a real app, this would be saved to the database
-    console.log("Comment added to entry", entry.id, newComment);
   };
 
   return (

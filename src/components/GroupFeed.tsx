@@ -1,9 +1,15 @@
 
 import React, { useState, useEffect } from "react";
-import GroupEntryCard, { GroupEntryProps } from "./GroupEntryCard";
+import GroupEntryCard from "./GroupEntryCard";
 import { Button } from "./ui/button";
 import { UserPlus, Link as LinkIcon, ArrowLeft } from "lucide-react";
-import { getAllEntries } from "@/lib/journalStorage";
+import { 
+  getAllEntries,
+  getCommentsForEntry,
+  getLikesForEntry,
+  addMemberToGroup,
+  getEntriesSharedWithGroup
+} from "@/lib/journalStorage";
 import { Input } from "./ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -14,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import AdCard from "@/components/AdCard";
 
 interface GroupFeedProps {
   group: {
@@ -26,19 +33,22 @@ interface GroupFeedProps {
 
 const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<GroupEntryProps[]>([]);
+  const [entries, setEntries] = useState<any[]>([]);
   const [email, setEmail] = useState("");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
   
   useEffect(() => {
-    // In a real app, this would fetch shared entries for this group from the database
-    // For now, we'll use localStorage entries that are marked as shared
-    const allEntries = getAllEntries();
-    const sharedEntries = allEntries
-      .filter(entry => entry.isShared)
-      .map(entry => ({
+    // Get shared entries for this group
+    const sharedEntries = getEntriesSharedWithGroup(group.id);
+    
+    // Transform to GroupEntryProps format
+    const formattedEntries = sharedEntries.map(entry => {
+      const comments = getCommentsForEntry(entry.id);
+      const likes = getLikesForEntry(entry.id);
+      
+      return {
         id: `group-${group.id}-entry-${entry.id}`,
         entryId: entry.id,
         title: entry.title,
@@ -47,11 +57,17 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
         media: entry.media,
         mood: entry.mood,
         sharedBy: "You", // In a real app, this would be the user's name
-        comments: [],
-        likes: []
-      }));
+        comments: comments.map(c => ({
+          id: c.id,
+          author: c.author,
+          content: c.content,
+          date: new Date(c.date)
+        })),
+        likes: likes.map(l => l.userId)
+      };
+    });
     
-    setEntries(sharedEntries);
+    setEntries(formattedEntries);
   }, [group.id]);
   
   const handleInvite = () => {
@@ -64,14 +80,24 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
       return;
     }
     
-    // In a real app, this would send an invitation email
-    toast({
-      title: "Invitation sent",
-      description: `Invitation has been sent to ${email}`
-    });
+    // Add member to group
+    const success = addMemberToGroup(group.id, email);
     
-    setEmail("");
-    setInviteDialogOpen(false);
+    if (success) {
+      toast({
+        title: "Invitation sent",
+        description: `Invitation has been sent to ${email}`
+      });
+      
+      setEmail("");
+      setInviteDialogOpen(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "This email is already a member of the group",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleGenerateLink = () => {
@@ -142,12 +168,17 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {entries.map(entry => (
-            <GroupEntryCard 
-              key={entry.id} 
-              entry={entry}
-              currentUser="You" // In a real app, this would be the user's ID
-            />
+          {entries.map((entry, index) => (
+            <React.Fragment key={entry.id}>
+              <GroupEntryCard 
+                entry={entry}
+                currentUser="You" // In a real app, this would be the user's ID
+              />
+              {/* Show ad after every 3 entries */}
+              {(index + 1) % 3 === 0 && entries.length > 3 && (
+                <AdCard variant="medium" />
+              )}
+            </React.Fragment>
           ))}
         </div>
       )}
