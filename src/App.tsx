@@ -14,7 +14,7 @@ const Index = lazy(() => import("./pages/Index"));
 const EntryDetail = lazy(() => import("./pages/EntryDetail"));
 const NewEntry = lazy(() => import("./pages/NewEntry"));
 const Favorites = lazy(() => import("./pages/Favorites"));
-const Shared = lazy(() => import("./pages/Shared"));
+const InnerCircle = lazy(() => import("./pages/Shared"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Bookmarks = lazy(() => import("./pages/Bookmarks"));
 const BabyHealth = lazy(() => import("./pages/BabyHealth"));
@@ -61,7 +61,7 @@ const App = () => (
               } />
               <Route path="/shared" element={
                 <ProtectedRoute>
-                  <Shared />
+                  <InnerCircle />
                 </ProtectedRoute>
               } />
               <Route path="/bookmarks" element={
