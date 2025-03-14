@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { getEntry, toggleFavorite, updateEntry, JournalEntry, deleteEntry } from "@/lib/journalStorage";
+import { getEntry, toggleFavorite, updateEntry, JournalEntry, deleteEntry, updateSharing } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
 import BottomBar from "@/components/BottomBar";
 import { useToast } from "@/components/ui/use-toast";
@@ -63,6 +62,7 @@ const EntryDetail = () => {
   const [mood, setMood] = useState<MoodType | undefined>(undefined);
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false);
+  const [sharedWithGroups, setSharedWithGroups] = useState<string[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -79,6 +79,7 @@ const EntryDetail = () => {
         setMood(formattedEntry.mood);
         setKickCount(formattedEntry.kickCount || 0);
         setIsShared(formattedEntry.isShared || false);
+        setSharedWithGroups(foundEntry.sharedWithGroups || []);
         setTitle(formattedEntry.title);
         setContent(formattedEntry.content);
         setMedia(formattedEntry.media || []);
@@ -117,6 +118,7 @@ const EntryDetail = () => {
       mood,
       kickCount,
       isShared,
+      sharedWithGroups,
       date: entry.date instanceof Date ? entry.date.toISOString() : entry.date,
       favorite: isFavorite
     };
@@ -164,11 +166,30 @@ const EntryDetail = () => {
     setTimeout(saveChanges, 0);
   };
 
-  const handleSharingChange = (shared: boolean) => {
+  const handleSharingChange = (shared: boolean, selectedGroups?: string[]) => {
     setIsShared(shared);
+    if (selectedGroups) {
+      setSharedWithGroups(selectedGroups);
+    }
     
-    // We'll save changes immediately when sharing is toggled
-    setTimeout(saveChanges, 0);
+    // Update in storage
+    if (id) {
+      updateSharing(id, shared, selectedGroups);
+    }
+    
+    // Toast notification
+    if (shared) {
+      const groupCount = selectedGroups ? selectedGroups.length : 0;
+      toast({
+        title: "Entry shared",
+        description: `Your entry has been shared with ${groupCount} group(s)`,
+      });
+    } else {
+      toast({
+        title: "Entry private",
+        description: "Your entry is now private",
+      });
+    }
   };
 
   const handleKickCountChange = (count: number) => {

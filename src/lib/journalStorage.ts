@@ -16,6 +16,7 @@ export interface JournalEntry {
   mood?: MoodType;
   kickCount?: number;
   isShared?: boolean;
+  sharedWithGroups?: string[]; // Array of group IDs
 }
 
 // Key for localStorage
@@ -57,6 +58,7 @@ export const saveEntry = (entry: Omit<JournalEntry, 'id'>): JournalEntry => {
   if (newEntry.mood === undefined) newEntry.mood = null;
   if (newEntry.kickCount === undefined) newEntry.kickCount = 0;
   if (newEntry.isShared === undefined) newEntry.isShared = false;
+  if (newEntry.sharedWithGroups === undefined) newEntry.sharedWithGroups = [];
   
   localStorage.setItem(JOURNAL_ENTRIES_KEY, JSON.stringify([newEntry, ...entries]));
   return newEntry;
@@ -117,17 +119,28 @@ export const updateMood = (id: string, mood: MoodType): boolean => {
 };
 
 // Update sharing status
-export const updateSharing = (id: string, isShared: boolean): boolean => {
+export const updateSharing = (id: string, isShared: boolean, groupIds?: string[]): boolean => {
   const entry = getEntry(id);
   if (!entry) return false;
   
   const updatedEntry = { 
     ...entry, 
-    isShared 
+    isShared,
+    sharedWithGroups: groupIds || []
   };
   
   updateEntry(updatedEntry);
   return true;
+};
+
+// Get entries shared with a specific group
+export const getEntriesSharedWithGroup = (groupId: string): JournalEntry[] => {
+  const entries = getAllEntries();
+  return entries.filter(entry => 
+    entry.isShared && 
+    entry.sharedWithGroups && 
+    entry.sharedWithGroups.includes(groupId)
+  );
 };
 
 // Update kick count

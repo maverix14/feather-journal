@@ -8,29 +8,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { featureFlags } from "@/config/features";
 import { cn } from "@/lib/utils";
-import { Plus, Users, Mail, Link, UserPlus } from "lucide-react";
+import { Plus, Users, Mail, Link as LinkIcon, UserPlus, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import GroupFeed from "@/components/GroupFeed";
+import { SharingGroup } from "@/components/SharingToggle";
 
 // Inner Circle (formerly Shared) component
 const InnerCircle = () => {
-  const [groups, setGroups] = useState<any[]>([]);
+  const [groups, setGroups] = useState<SharingGroup[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<SharingGroup | null>(null);
   const { isAuthenticated, isGuestMode } = useAuth();
   const { toast } = useToast();
 
-  // Mock data for demonstration purposes
+  // Load groups from localStorage
   useEffect(() => {
-    // In a real app, this would fetch from a database
-    const mockGroups = [
-      { id: "1", name: "Family", memberCount: 5, unreadCount: 2 },
-      { id: "2", name: "Friends", memberCount: 8, unreadCount: 0 },
-      { id: "3", name: "Partner", memberCount: 1, unreadCount: 1 },
-    ];
-    
-    setGroups(mockGroups);
+    const storedGroups = localStorage.getItem('innerCircleGroups');
+    if (storedGroups) {
+      setGroups(JSON.parse(storedGroups));
+    } else {
+      // Default groups if none exist
+      const defaultGroups = [
+        { id: "1", name: "Family", memberCount: 0 },
+        { id: "2", name: "Friends", memberCount: 0 },
+        { id: "3", name: "Partner", memberCount: 0 },
+      ];
+      setGroups(defaultGroups);
+      localStorage.setItem('innerCircleGroups', JSON.stringify(defaultGroups));
+    }
   }, []);
+
+  // Save groups to localStorage when they change
+  useEffect(() => {
+    if (groups.length > 0) {
+      localStorage.setItem('innerCircleGroups', JSON.stringify(groups));
+    }
+  }, [groups]);
 
   const handleCreateGroup = () => {
     if (!newGroupName.trim()) {
@@ -55,8 +70,7 @@ const InnerCircle = () => {
     const newGroup = {
       id: Date.now().toString(),
       name: newGroupName,
-      memberCount: 1,
-      unreadCount: 0,
+      memberCount: 0,
     };
 
     setGroups([...groups, newGroup]);
@@ -66,6 +80,15 @@ const InnerCircle = () => {
     toast({
       title: "Group created",
       description: `Your "${newGroupName}" group has been created`,
+    });
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    setGroups(groups.filter(group => group.id !== id));
+    
+    toast({
+      title: "Group deleted",
+      description: "Your group has been deleted",
     });
   };
 
@@ -113,6 +136,25 @@ const InnerCircle = () => {
   };
 
   if (featureFlags.sharedEnabled && (isAuthenticated || isGuestMode)) {
+    if (selectedGroup) {
+      return (
+        <div className="min-h-screen pb-24 px-4" style={{ backgroundColor: "#e0f2f1" }}>
+          <Header />
+          <main className="mt-6">
+            <GroupFeed 
+              group={selectedGroup} 
+              onBack={() => setSelectedGroup(null)} 
+            />
+            
+            <div className="mt-8">
+              <AdCard variant="medium" />
+            </div>
+          </main>
+          <BottomBar />
+        </div>
+      );
+    }
+    
     return (
       <div className="min-h-screen pb-24 px-4" style={{ backgroundColor: "#e0f2f1" }}>
         <Header />
@@ -130,11 +172,12 @@ const InnerCircle = () => {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex justify-between items-center">
                     {group.name}
-                    {group.unreadCount > 0 && (
-                      <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">
-                        {group.unreadCount} new
-                      </span>
-                    )}
+                    <button 
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      onClick={() => handleDeleteGroup(group.id)}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </CardTitle>
                   <p className="text-sm text-muted-foreground flex items-center">
                     <Users className="w-3 h-3 mr-1" /> 
@@ -156,10 +199,16 @@ const InnerCircle = () => {
                       size="sm" 
                       className="flex-1 flex items-center justify-center gap-1"
                     >
-                      <Link className="w-3 h-3" />
+                      <LinkIcon className="w-3 h-3" />
                       Share Link
                     </Button>
                   </div>
+                  <Button 
+                    className="w-full mt-3"
+                    onClick={() => setSelectedGroup(group)}
+                  >
+                    View Group
+                  </Button>
                 </CardContent>
               </Card>
             ))}
