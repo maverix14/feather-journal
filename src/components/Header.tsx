@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Settings, User, Bookmark, Wallet, LogOut, Sparkle } from "lucide-react";
+import { Settings, User, Bookmark, Wallet, LogOut, Sparkle, LogIn } from "lucide-react";
 import Logo from "./Logo";
 import { cn } from "@/lib/utils";
 import {
@@ -20,16 +20,21 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ className }) => {
-  const { logout, user } = useAuth();
+  const { logout, user, isGuestMode } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    logout();
-    toast({
-      title: "Logged out",
-      description: "You have been successfully logged out.",
-    });
-    navigate("/landing");
+    if (isGuestMode) {
+      // If in guest mode, navigate to login page instead of logging out
+      navigate("/auth");
+    } else {
+      logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/landing");
+    }
   };
 
   return (
@@ -58,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
                     <User className="w-4 h-4" />
                   )}
                 </div>
-                <span>{user?.name || "Your Profile"}</span>
+                <span>{isGuestMode ? "Guest Mode" : (user?.name || "Your Profile")}</span>
               </div>
             </Link>
           </DropdownMenuItem>
@@ -84,9 +89,21 @@ const Header: React.FC<HeaderProps> = ({ className }) => {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-            <LogOut className="mr-2 h-4 w-4" />
-            <span>Log out</span>
+          <DropdownMenuItem 
+            onClick={handleLogout} 
+            className={isGuestMode ? "" : "text-destructive focus:text-destructive"}
+          >
+            {isGuestMode ? (
+              <>
+                <LogIn className="mr-2 h-4 w-4" />
+                <span>Log In</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </>
+            )}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

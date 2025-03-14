@@ -1,6 +1,8 @@
+
 import React from "react";
 import Header from "@/components/Header";
 import BottomBar from "@/components/BottomBar";
+import AdCard from "@/components/AdCard";
 import { featureFlags } from "@/config/features";
 
 const Insights = () => {
@@ -12,6 +14,9 @@ const Insights = () => {
         <main>
           <h1 className="text-2xl font-medium tracking-tight mb-6 animate-slide-down">Insights</h1>
           <div>{/* Actual Insights Content */}</div>
+          <div className="mt-8">
+            <AdCard variant="medium" />
+          </div>
         </main>
         <BottomBar />
       </div>
@@ -63,6 +68,10 @@ const Insights = () => {
               </ul>
             </div>
           </div>
+        </div>
+        
+        <div className="mt-8">
+          <AdCard variant="medium" />
         </div>
       </main>
       

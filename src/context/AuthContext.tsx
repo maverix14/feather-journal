@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 
 type User = {
@@ -11,7 +10,7 @@ type User = {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, migrateGuestData?: boolean) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -59,7 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Mock login function - replace with real auth in production
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, migrateGuestData = false) => {
     setLoading(true);
     try {
       // This simulates an API call
@@ -74,6 +73,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+      
+      // If we're migrating guest data, we don't clear it yet
+      if (!migrateGuestData) {
+        // In a real app, this would be where you'd clear local data
+        // For now, we'll just simulate this behavior
+        console.log("Clearing guest data without migration");
+      } else {
+        console.log("Migrating guest data to account");
+        // In a real app, here we would:
+        // 1. Get all entries from localStorage
+        // 2. Send those entries to the server to be associated with the user's account
+        // 3. Then clear the localStorage entries after confirmation
+        
+        // For this demo, we'll keep the entries in localStorage
+        // In a real app with a backend, they would be uploaded to the server
+      }
+      
       // Ensure guest mode is disabled when logging in
       localStorage.removeItem("guestMode");
       setIsGuestMode(false);

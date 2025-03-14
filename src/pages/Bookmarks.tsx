@@ -38,7 +38,10 @@ const Bookmarks = () => {
             {bookmarks.map((entry, index) => (
               <EntryCard 
                 key={entry.id} 
-                entry={entry} 
+                entry={{
+                  ...entry,
+                  date: new Date(entry.date) // Convert string date to Date object
+                }}
                 className={`animate-scale-in transition-all delay-${index}`}
               />
             ))}

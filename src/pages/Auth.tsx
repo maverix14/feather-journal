@@ -1,11 +1,12 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Logo from "@/components/Logo";
-import { ChevronLeft, LogIn, UserPlus, Lock, Mail, Info } from "lucide-react";
+import { ChevronLeft, LogIn, UserPlus, Lock, Mail, Info, AlertTriangle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { getAllEntries } from "@/lib/journalStorage";
 import { 
   Dialog,
   DialogContent,
@@ -24,8 +25,17 @@ const Auth = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [showDataLossWarning, setShowDataLossWarning] = useState(false);
+  const [hasLocalData, setHasLocalData] = useState(false);
   const navigate = useNavigate();
-  const { login, signup, sendPasswordResetEmail } = useAuth();
+  const { login, signup, sendPasswordResetEmail, isGuestMode } = useAuth();
+
+  // Check if there's guest data on mount
+  useEffect(() => {
+    const entries = getAllEntries();
+    setHasLocalData(entries.length > 0 && isGuestMode);
+  }, [isGuestMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +50,14 @@ const Auth = () => {
         });
         setIsForgotPassword(false);
       } else if (isLogin) {
-        await login(email, password);
-        toast({
-          title: "Logged in successfully",
-          description: "Welcome back to Lil Baby Kicks journal!",
-        });
-        navigate("/");
+        // When logging in, check if there's guest data to migrate
+        if (hasLocalData) {
+          setShowMigrationDialog(true);
+          setIsSubmitting(false);
+          return;
+        }
+        
+        await performLogin();
       } else {
         await signup(name, email, password);
         toast({
@@ -61,8 +73,44 @@ const Auth = () => {
         variant: "destructive",
       });
     } finally {
+      if (!showMigrationDialog) {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const performLogin = async (migrateData = false) => {
+    try {
+      await login(email, password, migrateData);
+      toast({
+        title: "Logged in successfully",
+        description: "Welcome back to Lil Baby Kicks journal!",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Login error",
+        description: "Please check your credentials and try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleMigrationConfirm = () => {
+    setShowMigrationDialog(false);
+    performLogin(true);
+  };
+
+  const handleMigrationDecline = () => {
+    setShowMigrationDialog(false);
+    setShowDataLossWarning(true);
+  };
+
+  const handleDataLossConfirm = () => {
+    setShowDataLossWarning(false);
+    performLogin(false);
   };
 
   const handleSkipLogin = () => {
@@ -292,6 +340,83 @@ const Auth = () => {
               className="sm:flex-1"
             >
               Continue as Guest
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data Migration Dialog */}
+      <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              Migrate Guest Data
+            </DialogTitle>
+            <DialogDescription>
+              We've detected existing journal entries on this device.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-3">
+            <p>Would you like to migrate your local journal entries to your account?</p>
+            <p className="text-sm text-muted-foreground">
+              This will preserve all your existing entries, bookmarks, and settings.
+            </p>
+          </div>
+          
+          <DialogFooter className="flex sm:flex-row sm:justify-between gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleMigrationDecline}
+              className="sm:flex-1"
+            >
+              No, Start Fresh
+            </Button>
+            <Button 
+              onClick={handleMigrationConfirm}
+              className="sm:flex-1"
+            >
+              Yes, Migrate My Data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Data Loss Warning Dialog */}
+      <Dialog open={showDataLossWarning} onOpenChange={setShowDataLossWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Warning: Data Loss
+            </DialogTitle>
+            <DialogDescription>
+              You're about to lose all your local journal entries.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-3">
+            <p className="font-medium">This action cannot be undone.</p>
+            <p className="text-sm text-muted-foreground">
+              All entries, bookmarks, and settings stored on this device will be permanently lost.
+            </p>
+          </div>
+          
+          <DialogFooter className="flex sm:flex-row sm:justify-between gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDataLossWarning(false)}
+              className="sm:flex-1"
+            >
+              Go Back
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleDataLossConfirm}
+              className="sm:flex-1"
+            >
+              Continue Without Data
             </Button>
           </DialogFooter>
         </DialogContent>
