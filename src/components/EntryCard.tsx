@@ -1,10 +1,27 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
-import { Bookmark, HeartHandshake, Image, Music, Video, Lock } from "lucide-react";
+import { 
+  Bookmark, 
+  HeartHandshake, 
+  Image, 
+  Music, 
+  Video, 
+  Lock, 
+  FilePenLine, 
+  FileHeart, 
+  Heart, 
+  MessageSquare 
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { MoodType } from "./MoodSelector";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { getLikesForEntry, getCommentsForEntry } from "@/lib/journalStorage";
 
 export interface EntryProps {
   id: string;
@@ -19,6 +36,8 @@ export interface EntryProps {
   mood?: MoodType;
   kickCount?: number;
   isShared?: boolean;
+  sharedWithGroups?: string[];
+  isPartnerEntry?: boolean;
 }
 
 interface EntryCardProps {
@@ -41,9 +60,10 @@ const EntryCard: React.FC<EntryCardProps> = ({
     media,
     mood,
     isShared,
+    isPartnerEntry,
+    sharedWithGroups = [],
   } = entry;
 
-  // For mood emoji mapping
   const getMoodEmoji = (mood: MoodType | undefined) => {
     switch (mood) {
       case "happy":
@@ -61,7 +81,6 @@ const EntryCard: React.FC<EntryCardProps> = ({
     }
   };
 
-  // For mood colors
   const getMoodColor = (mood: MoodType | undefined) => {
     switch (mood) {
       case "happy":
@@ -146,7 +165,48 @@ const EntryCard: React.FC<EntryCardProps> = ({
     }
   };
 
+  const getLikesAndComments = () => {
+    if (!isShared || !sharedWithGroups || sharedWithGroups.length === 0) {
+      return { likes: 0, comments: 0, breakdown: {} };
+    }
+
+    let totalLikes = 0;
+    let totalComments = 0;
+    const breakdown: Record<string, { likes: number; comments: number }> = {};
+
+    const likes = getLikesForEntry(id);
+    const comments = getCommentsForEntry(id);
+
+    totalLikes = likes.length;
+    totalComments = comments.length;
+
+    if (sharedWithGroups.includes("partner")) {
+      breakdown["Partner"] = { likes: likes.length / 2, comments: comments.length / 2 };
+    }
+    if (sharedWithGroups.includes("family")) {
+      breakdown["Family"] = { likes: likes.length / 2, comments: comments.length / 2 };
+    }
+    if (sharedWithGroups.includes("friends")) {
+      breakdown["Friends"] = { likes: likes.length / 3, comments: comments.length / 3 };
+    }
+    if (sharedWithGroups.includes("private")) {
+      breakdown["Private"] = { likes: likes.length / 4, comments: comments.length / 4 };
+    }
+
+    return { likes: totalLikes, comments: totalComments, breakdown };
+  };
+
+  const { likes, comments, breakdown } = getLikesAndComments();
+  const hasInteractions = likes > 0 || comments > 0;
   const moodColor = getMoodColor(mood);
+
+  const formatBreakdown = () => {
+    const parts = [];
+    for (const [group, counts] of Object.entries(breakdown)) {
+      parts.push(`${group}: ${counts.likes} likes, ${counts.comments} comments`);
+    }
+    return parts.join('\n');
+  };
 
   return (
     <Link
@@ -154,19 +214,45 @@ const EntryCard: React.FC<EntryCardProps> = ({
       className={cn(
         "block neo-shadow rounded-xl p-4 transition-all hover:neo-inset animate-fade-in",
         className,
-        moodColor && "relative overflow-hidden" // Add relative for absolute positioning
+        moodColor && "relative overflow-hidden"
       )}
     >
       {moodColor && (
         <div
           className="absolute inset-0 z-0"
-          style={{ backgroundColor: moodColor, opacity: 0.95 }} // Adjust opacity as needed
+          style={{ backgroundColor: moodColor, opacity: 0.95 }}
         />
       )}
       {renderMediaPreview()}
 
       <div className="flex justify-between items-start mb-2 relative z-10">
-        <h3 className="text-lg font-medium">{title}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-medium">{title}</h3>
+          {isPartnerEntry && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <FileHeart className="w-4 h-4 text-primary" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Shared by Your Partner</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {!isPartnerEntry && isShared && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <FilePenLine className="w-4 h-4 text-primary" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Your Original Entry</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <button
           onClick={handleFavoriteClick}
           className="group p-1.5 -mt-1 -mr-1"
@@ -185,15 +271,58 @@ const EntryCard: React.FC<EntryCardProps> = ({
       </p>
 
       <div className="flex justify-between items-center text-xs text-muted-foreground relative z-10">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <span className="px-2 py-1 rounded-full glass-morphism flex items-center">
             {isShared ? (
-              <HeartHandshake className="w-3 h-3 text-primary mr-1" />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HeartHandshake className="w-3 h-3 text-primary mr-1" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Shared Entry</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
-              <Lock className="w-3 h-3 mr-1" />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Lock className="w-3 h-3 mr-1" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Private Entry</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {format(date, "MMM d, yyyy")}
           </span>
+          
+          {hasInteractions && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <span className="px-2 py-1 rounded-full bg-primary/10 text-primary flex items-center gap-1 text-xs">
+                    <span>Inner Circle</span>
+                    {likes > 0 && <span className="flex items-center gap-0.5">
+                      <Heart className="w-3 h-3" />{likes}
+                    </span>}
+                    {comments > 0 && <span className="flex items-center gap-0.5">
+                      <MessageSquare className="w-3 h-3" />{comments}
+                    </span>}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-xs whitespace-pre">
+                    {Object.keys(breakdown).length > 0 
+                      ? formatBreakdown() 
+                      : `Likes: ${likes}\nComments: ${comments}`}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
         <div className="flex gap-2 items-center">
           {mood && (

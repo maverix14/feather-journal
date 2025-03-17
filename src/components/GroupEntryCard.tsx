@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Heart, MessageSquare, Image, Music, Video } from "lucide-react";
 import { cn } from "@/lib/utils";

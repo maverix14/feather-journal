@@ -1,9 +1,17 @@
-import React from "react";
+import React, { useState } from "react";
 import Header from "@/components/Header";
 import BottomBar from "@/components/BottomBar";
 import { featureFlags } from "@/config/features";
+import { Button } from "@/components/ui/button";
+import { Sparkle } from "lucide-react";
+import RegisterBenefitsDialog from "@/components/RegisterBenefitsDialog";
+import { benefitContexts } from "@/config/accountBenefits";
+import { useAuth } from "@/context/AuthContext";
 
 const Wallet = () => {
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
+  const { isGuestMode } = useAuth();
+
   if (featureFlags.walletEnabled) {
     // Render actual Wallet component here
     return (
@@ -36,7 +44,7 @@ const Wallet = () => {
             The wallet feature is coming soon! You'll be able to unlock premium features:
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left mb-8">
             <div className="p-4 rounded-lg glass-morphism">
               <h4 className="font-medium mb-2">Advanced Journaling</h4>
               <ul className="text-sm space-y-2 text-muted-foreground">
@@ -64,8 +72,29 @@ const Wallet = () => {
               </ul>
             </div>
           </div>
+          
+          {isGuestMode && (
+            <Button
+              onClick={() => setShowRegisterDialog(true)}
+              className="rounded-full px-6"
+              size="lg"
+            >
+              <Sparkle className="mr-2 h-4 w-4" />
+              Discover All You Get with an Account
+            </Button>
+          )}
         </div>
       </main>
+      
+      <RegisterBenefitsDialog
+        open={showRegisterDialog}
+        onOpenChange={setShowRegisterDialog}
+        title="Premium Features Await"
+        description={benefitContexts.comingSoon}
+        primaryActionLabel="Create Account Now"
+        secondaryActionLabel="Maybe Later"
+        showMigrationInfo={true}
+      />
       
       <BottomBar />
     </div>

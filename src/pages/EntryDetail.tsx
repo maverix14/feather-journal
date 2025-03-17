@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Bookmark, Play, Pause, Mic, Pencil, Trash2, FilePenLine, FileHeart } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getEntry, toggleFavorite, updateEntry, JournalEntry, deleteEntry, updateSharing } from "@/lib/journalStorage";
 import { EntryProps } from "@/components/EntryCard";
@@ -13,7 +13,15 @@ import SharingToggle from "@/components/SharingToggle";
 import AudioPlayer from "@/components/AudioPlayer";
 import EntryTitleInput from "@/components/EntryTitleInput";
 import AttachmentHandler from "@/components/AttachmentHandler";
+import InnerCircleInteractions from "@/components/InnerCircleInteractions";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const getMoodColor = (mood: MoodType | undefined) => {
   switch (mood) {
@@ -53,6 +61,7 @@ const EntryDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isGuestMode } = useAuth();
   const [entry, setEntry] = useState<EntryProps | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -63,15 +72,15 @@ const EntryDetail = () => {
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false);
   const [sharedWithGroups, setSharedWithGroups] = useState<string[]>([]);
+  const [isPartnerEntry, setIsPartnerEntry] = useState(false);
 
   useEffect(() => {
     if (id) {
       const foundEntry = getEntry(id);
       if (foundEntry) {
-        // Convert to EntryProps format for component
         const formattedEntry: EntryProps = {
           ...foundEntry,
-          date: new Date(foundEntry.date), // Convert ISO string to Date
+          date: new Date(foundEntry.date),
         };
         
         setEntry(formattedEntry);
@@ -83,8 +92,8 @@ const EntryDetail = () => {
         setTitle(formattedEntry.title);
         setContent(formattedEntry.content);
         setMedia(formattedEntry.media || []);
+        setIsPartnerEntry(false);
       } else {
-        // Entry not found
         toast({
           title: "Error",
           description: "Journal entry not found",
@@ -94,6 +103,15 @@ const EntryDetail = () => {
       }
     }
   }, [id, navigate, toast]);
+
+  useEffect(() => {
+    if (isGuestMode && isShared) {
+      setIsShared(false);
+      if (id) {
+        updateSharing(id, false);
+      }
+    }
+  }, [isGuestMode, isShared, id]);
 
   const handleToggleFavorite = () => {
     if (!id) return;
@@ -125,13 +143,11 @@ const EntryDetail = () => {
     
     updateEntry(updatedEntry);
     
-    // Update local state
     setEntry({
       ...updatedEntry,
       date: new Date(updatedEntry.date),
     });
     
-    // Exit edit mode if active
     if (isEditing) {
       setIsEditing(false);
     }
@@ -145,7 +161,6 @@ const EntryDetail = () => {
   const handleDeleteEntry = () => {
     if (!id) return;
     
-    // Delete the entry and navigate back
     deleteEntry(id);
     
     toast({
@@ -162,22 +177,28 @@ const EntryDetail = () => {
     const nextIndex = (currentIndex + 1) % moods.length;
     setMood(moods[nextIndex]);
     
-    // Save immediately on mood change
     setTimeout(saveChanges, 0);
   };
 
   const handleSharingChange = (shared: boolean, selectedGroups?: string[]) => {
+    if (isGuestMode && shared) {
+      toast({
+        title: "Sharing unavailable in guest mode",
+        description: "Please create an account or log in to share entries with your inner circle.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsShared(shared);
     if (selectedGroups) {
       setSharedWithGroups(selectedGroups);
     }
     
-    // Update in storage
     if (id) {
       updateSharing(id, shared, selectedGroups);
     }
     
-    // Toast notification
     if (shared) {
       const groupCount = selectedGroups ? selectedGroups.length : 0;
       toast({
@@ -195,7 +216,6 @@ const EntryDetail = () => {
   const handleKickCountChange = (count: number) => {
     setKickCount(count);
     
-    // We'll save changes immediately when kick count is changed
     setTimeout(saveChanges, 0);
   };
 
@@ -205,7 +225,6 @@ const EntryDetail = () => {
 
   const toggleEditMode = () => {
     if (isEditing) {
-      // Save changes when exiting edit mode
       saveChanges();
     }
     setIsEditing(!isEditing);
@@ -233,25 +252,13 @@ const EntryDetail = () => {
               />
             );
           }
-          if (item.type === "video") {
-            return (
-              <div key={index} className="rounded-xl overflow-hidden relative bg-muted/30 h-64">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <button className="w-16 h-16 rounded-full glass-morphism flex items-center justify-center">
-                    <Play className="w-8 h-8 ml-1" />
-                  </button>
-                </div>
-                <video poster="/placeholder.svg" className="w-full h-full object-cover opacity-80" />
-              </div>
-            );
-          }
           return null;
         })}
       </div>
     );
   };
 
-  const moodColor = getMoodColor(mood);
+  const moodColor = mood ? getMoodColor(mood) : "#FAFAFA";
 
   if (!entry) {
     return (
@@ -262,7 +269,7 @@ const EntryDetail = () => {
   }
 
   return (
-    <div className="min-h-screen pb-24 px-4" style={{ backgroundColor: moodColor }}>
+    <div className="min-h-screen pb-24 px-4 sm:px-16 md:px-24 lg:px-32" style={{ backgroundColor: moodColor }}>
       <header className="py-4 flex items-center justify-between mb-6 animate-slide-down">
         <button 
           onClick={() => navigate(-1)} 
@@ -308,8 +315,33 @@ const EntryDetail = () => {
               setTitle={setTitle}
             />
           ) : (
-            <div>
+            <div className="flex items-center gap-2">
               <h1 className="text-2xl font-medium tracking-tight">{entry.title}</h1>
+              
+              {isPartnerEntry ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <FileHeart className="w-5 h-5 text-primary" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Shared by Your Partner</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : isShared ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <FilePenLine className="w-5 h-5 text-primary" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Your Original Entry</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
+              
               <span className="text-sm text-muted-foreground">
                 {formatDistanceToNow(entry.date, { addSuffix: true })}
               </span>
@@ -349,6 +381,10 @@ const EntryDetail = () => {
             className="flex-1 h-full"
           />
         </div>
+        
+        {isShared && !isEditing && id && (
+          <InnerCircleInteractions entryId={id} />
+        )}
         
         {isEditing ? (
           <div className="mt-6 flex justify-between">

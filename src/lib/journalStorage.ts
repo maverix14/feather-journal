@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { AttachmentType } from "@/components/AttachmentHandler";
 import { MoodType } from "@/components/MoodSelector";
@@ -176,23 +175,52 @@ export interface InnerCircleGroup {
 // Get all inner circle groups
 export const getAllGroups = (): InnerCircleGroup[] => {
   const groupsJson = localStorage.getItem(INNER_CIRCLE_GROUPS_KEY);
-  if (!groupsJson) {
-    // Default groups if none exist
-    const defaultGroups: InnerCircleGroup[] = [
-      { id: "1", name: "Family", memberCount: 0, createdAt: new Date().toISOString() },
-      { id: "2", name: "Friends", memberCount: 0, createdAt: new Date().toISOString() },
-      { id: "3", name: "Partner", memberCount: 0, createdAt: new Date().toISOString() },
-    ];
-    localStorage.setItem(INNER_CIRCLE_GROUPS_KEY, JSON.stringify(defaultGroups));
-    return defaultGroups;
+  let groups: InnerCircleGroup[] = [];
+  
+  if (groupsJson) {
+    try {
+      groups = JSON.parse(groupsJson);
+    } catch (error) {
+      console.error('Error parsing inner circle groups:', error);
+    }
   }
   
-  try {
-    return JSON.parse(groupsJson);
-  } catch (error) {
-    console.error('Error parsing inner circle groups:', error);
-    return [];
-  }
+  // Define the standard groups
+  const standardGroups = [
+    { id: "partner", name: "Partner", memberCount: 0 },
+    { id: "family", name: "Family", memberCount: 0 },
+    { id: "friends", name: "Friends", memberCount: 0 },
+    { id: "private", name: "Private", memberCount: 0 }
+  ];
+  
+  // Ensure all standard groups exist
+  standardGroups.forEach(standardGroup => {
+    if (!groups.some(g => g.id === standardGroup.id)) {
+      groups.push({
+        ...standardGroup,
+        createdAt: new Date().toISOString(),
+        members: []
+      });
+    }
+  });
+  
+  // Filter out any non-standard groups
+  groups = groups.filter(group => 
+    standardGroups.some(sg => sg.id === group.id)
+  );
+  
+  // Sort groups in the correct order: Partner, Family, Friends, Private
+  groups = groups.sort((a, b) => {
+    const order = { 'partner': 0, 'family': 1, 'friends': 2, 'private': 3 };
+    const aOrder = order[a.id as keyof typeof order] ?? 99;
+    const bOrder = order[b.id as keyof typeof order] ?? 99;
+    return aOrder - bOrder;
+  });
+  
+  // Save the cleaned up groups back to localStorage
+  localStorage.setItem(INNER_CIRCLE_GROUPS_KEY, JSON.stringify(groups));
+  
+  return groups;
 };
 
 // Get a single group by ID
@@ -203,21 +231,41 @@ export const getGroup = (id: string): InnerCircleGroup | undefined => {
 
 // Create a new group
 export const createGroup = (name: string): InnerCircleGroup => {
+  // This function is now restricted to only create predefined groups
+  // Check if the new group is one of the standard ones
+  const standardGroups = ["partner", "family", "friends", "private"];
+  const normalizedName = name.toLowerCase();
+  
+  if (!standardGroups.includes(normalizedName)) {
+    // If not a standard group, use "private" as fallback
+    name = "Private";
+  }
+  
   const groups = getAllGroups();
   const newGroup: InnerCircleGroup = {
-    id: uuidv4(),
-    name,
+    id: normalizedName,
+    name: name.charAt(0).toUpperCase() + name.slice(1),
     memberCount: 0,
     createdAt: new Date().toISOString(),
     members: []
   };
   
-  localStorage.setItem(INNER_CIRCLE_GROUPS_KEY, JSON.stringify([...groups, newGroup]));
+  // Only add if it doesn't already exist
+  if (!groups.some(g => g.id === normalizedName)) {
+    localStorage.setItem(INNER_CIRCLE_GROUPS_KEY, JSON.stringify([...groups, newGroup]));
+  }
+  
   return newGroup;
 };
 
-// Delete a group
+// Delete a group - no longer allows deleting predefined groups
 export const deleteGroup = (id: string): boolean => {
+  // Don't allow deleting predefined groups
+  const standardGroups = ["partner", "family", "friends", "private"];
+  if (standardGroups.includes(id)) {
+    return false;
+  }
+  
   const groups = getAllGroups();
   const filteredGroups = groups.filter(group => group.id !== id);
   
@@ -308,6 +356,7 @@ export interface Comment {
   author: string;
   content: string;
   date: string;
+  groupId?: string; // Added to track which group a comment belongs to
 }
 
 // Get comments for an entry
@@ -326,7 +375,7 @@ export const getCommentsForEntry = (entryId: string): Comment[] => {
 };
 
 // Add comment to an entry
-export const addComment = (entryId: string, author: string, content: string): Comment => {
+export const addComment = (entryId: string, author: string, content: string, groupId?: string): Comment => {
   const commentsJson = localStorage.getItem(INNER_CIRCLE_COMMENTS_KEY);
   let comments: Comment[] = [];
   
@@ -343,7 +392,8 @@ export const addComment = (entryId: string, author: string, content: string): Co
     entryId,
     author,
     content,
-    date: new Date().toISOString()
+    date: new Date().toISOString(),
+    groupId
   };
   
   localStorage.setItem(INNER_CIRCLE_COMMENTS_KEY, JSON.stringify([...comments, newComment]));

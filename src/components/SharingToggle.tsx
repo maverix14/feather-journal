@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { Lock, Share2, Users, Plus, X } from "lucide-react";
+import { Lock, Share2, Users, Info, HeartHandshake } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -15,9 +14,11 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { getAllGroups, createGroup, deleteGroup } from "@/lib/journalStorage";
+import { getAllGroups } from "@/lib/journalStorage";
+import { useAuth } from "@/context/AuthContext";
+import RegisterBenefitsDialog from "./RegisterBenefitsDialog";
+import { benefitContexts } from "@/config/accountBenefits";
 
 // Define group type
 export interface SharingGroup {
@@ -40,21 +41,60 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
   compact = false,
 }) => {
   const { toast } = useToast();
+  const { isGuestMode, isAuthenticated } = useAuth();
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [groups, setGroups] = useState<SharingGroup[]>([]);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   
-  // Load groups
+  // Load only the 4 predefined groups
   useEffect(() => {
+    // Define the 4 predefined groups with correct order
+    const predefinedGroups: SharingGroup[] = [
+      { id: 'partner', name: 'Partner', memberCount: 0 },
+      { id: 'family', name: 'Family', memberCount: 0 },
+      { id: 'friends', name: 'Friends', memberCount: 0 },
+      { id: 'private', name: 'Private', memberCount: 0 }
+    ];
+    
+    // Get actual member counts from storage
     const storedGroups = getAllGroups();
-    setGroups(storedGroups);
+    
+    // Update member counts if available
+    const updatedGroups = predefinedGroups.map(group => {
+      const storedGroup = storedGroups.find(g => g.id === group.id);
+      return {
+        ...group,
+        memberCount: storedGroup?.memberCount || 0
+      };
+    });
+    
+    setGroups(updatedGroups);
   }, []);
   
+  // Sync selectedGroups with isShared prop
+  useEffect(() => {
+    if (!isShared) {
+      setSelectedGroups([]);
+    }
+  }, [isShared]);
+
+  // Reset sharing state when in guest mode
+  useEffect(() => {
+    if (isGuestMode && isShared) {
+      onShareChange(false);
+    }
+  }, [isGuestMode, isShared, onShareChange]);
+  
   const handleToggleShare = () => {
+    if (isGuestMode) {
+      setShowRegisterDialog(true);
+      return;
+    }
+
     if (!isShared) {
       // If turning on sharing, open the popover
-      // The actual share state change happens when groups are selected
+      setIsOpen(true);
     } else {
       // If turning off sharing, do it immediately
       onShareChange(false);
@@ -69,6 +109,11 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
   };
   
   const handleShareConfirm = () => {
+    if (isGuestMode) {
+      setShowRegisterDialog(true);
+      return;
+    }
+
     if (selectedGroups.length === 0) {
       toast({
         title: "Select a group",
@@ -79,6 +124,7 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
     }
     
     onShareChange(true, selectedGroups);
+    setIsOpen(false);
     
     toast({
       title: "Entry shared",
@@ -86,55 +132,46 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
     });
   };
 
-  const handleCreateGroup = () => {
-    if (!newGroupName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a group name",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Render locked state for guest mode
+  if (isGuestMode) {
+    return (
+      <>
+        <div
+          onClick={handleToggleShare}
+          className={cn(
+            "flex items-center justify-between rounded-lg p-3 transition-all duration-300 relative cursor-pointer",
+            className
+          )}
+          style={{
+            backgroundColor: "rgba(229, 231, 235, 0.8)",
+            opacity: 0.8,
+          }}
+        >
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-background">
+            <Lock className="w-4 h-4" />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Private</span>
+            <Info className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </div>
 
-    if (groups.length >= 4) {
-      toast({
-        title: "Maximum groups reached",
-        description: "You can create up to 4 private groups",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Create new group
-    const newGroup = createGroup(newGroupName);
-
-    // Update UI
-    setGroups([...groups, newGroup]);
-    setNewGroupName("");
-    setIsCreatingGroup(false);
-
-    toast({
-      title: "Group created",
-      description: `Your "${newGroupName}" group has been created`,
-    });
-  };
-  
-  const removeGroup = (id: string) => {
-    // Delete group from storage
-    deleteGroup(id);
-    
-    // Update UI
-    setGroups(groups.filter(group => group.id !== id));
-    setSelectedGroups(selectedGroups.filter(groupId => groupId !== id));
-    
-    toast({
-      title: "Group deleted",
-      description: "Your group has been deleted",
-    });
-  };
+        <RegisterBenefitsDialog
+          open={showRegisterDialog}
+          onOpenChange={setShowRegisterDialog}
+          title="Create an Account to Share"
+          description={benefitContexts.sharing}
+          primaryActionLabel="Create Account & Share"
+          secondaryActionLabel="Stay in Guest Mode"
+          showMigrationInfo={true}
+        />
+      </>
+    );
+  }
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -172,7 +209,7 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
           
           <div className="space-y-2">
             {groups.map((group) => (
-              <div key={group.id} className="flex items-center justify-between">
+              <div key={group.id} className="flex items-center">
                 <label className="flex items-center flex-1">
                   <Checkbox
                     checked={selectedGroups.includes(group.id)}
@@ -181,55 +218,9 @@ const SharingToggle: React.FC<SharingToggleProps> = ({
                   />
                   <span className="text-sm">{group.name}</span>
                 </label>
-                <button 
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                  onClick={() => removeGroup(group.id)}
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             ))}
           </div>
-          
-          {groups.length < 4 && !isCreatingGroup ? (
-            <button
-              onClick={() => setIsCreatingGroup(true)}
-              className="w-full text-xs flex items-center justify-center py-1 px-2 border border-dashed border-muted-foreground/50 rounded-md text-muted-foreground hover:bg-muted transition-colors"
-            >
-              <Plus className="w-3 h-3 mr-1" /> Create new group
-            </button>
-          ) : null}
-          
-          {isCreatingGroup && (
-            <div className="space-y-2">
-              <Input
-                placeholder="Group name"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                className="w-full h-8 text-sm"
-              />
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleCreateGroup} 
-                  className="flex-1 h-7 text-xs"
-                  size="sm"
-                >
-                  Create
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsCreatingGroup(false);
-                    setNewGroupName("");
-                  }}
-                  className="flex-1 h-7 text-xs"
-                  size="sm"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
           
           <Button 
             onClick={handleShareConfirm} 

@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from "react";
 import { Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";

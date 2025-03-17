@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Logo from "@/components/Logo";
 import { ChevronLeft, LogIn, UserPlus, Lock, Mail, Info, AlertTriangle } from "lucide-react";
@@ -16,6 +15,8 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import RegisterBenefitsDialog from "@/components/RegisterBenefitsDialog";
+import { benefitContexts } from "@/config/accountBenefits";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,14 +25,13 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [showRegisterBenefits, setShowRegisterBenefits] = useState(false);
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
   const [showDataLossWarning, setShowDataLossWarning] = useState(false);
   const [hasLocalData, setHasLocalData] = useState(false);
   const navigate = useNavigate();
   const { login, signup, sendPasswordResetEmail, isGuestMode } = useAuth();
 
-  // Check if there's guest data on mount
   useEffect(() => {
     const entries = getAllEntries();
     setHasLocalData(entries.length > 0 && isGuestMode);
@@ -50,7 +50,6 @@ const Auth = () => {
         });
         setIsForgotPassword(false);
       } else if (isLogin) {
-        // When logging in, check if there's guest data to migrate
         if (hasLocalData) {
           setShowMigrationDialog(true);
           setIsSubmitting(false);
@@ -114,23 +113,26 @@ const Auth = () => {
   };
 
   const handleSkipLogin = () => {
-    // Show warning dialog instead of immediately using guest mode
-    setShowGuestWarning(true);
+    setShowRegisterBenefits(true);
   };
-  
+
   const confirmGuestMode = () => {
-    // Use guest mode - set localStorage flag
     localStorage.setItem("guestMode", "true");
     toast({
-      title: "Using guest mode",
+      title: "Guest mode activated",
       description: "Your data will be stored locally on this device only.",
     });
-    setShowGuestWarning(false);
-    navigate("/");
+    setShowRegisterBenefits(false);
+    
+    window.dispatchEvent(new Event('storage', { bubbles: true }));
+    window.dispatchEvent(new Event('localStorageChange'));
+    console.log("Navigating to index page from confirmGuestMode");
+    
+    setTimeout(() => navigate("/"), 10);
   };
 
   return (
-    <div className="min-h-screen px-4 py-8 flex flex-col">
+    <div className="min-h-screen px-4 sm:px-16 md:px-24 lg:px-32 py-8 flex flex-col">
       <header className="flex justify-between items-center mb-12 animate-slide-down">
         <Link
           to="/landing"
@@ -172,7 +174,6 @@ const Auth = () => {
                   Your Name
                 </label>
                 <div className="relative">
-                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
                     id="name"
                     type="text"
@@ -182,6 +183,7 @@ const Auth = () => {
                     className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
                     required={!isLogin && !isForgotPassword}
                   />
+                  <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" style={{ zIndex: 10 }} />
                 </div>
               </div>
             )}
@@ -191,7 +193,6 @@ const Auth = () => {
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   id="email"
                   type="email"
@@ -201,6 +202,7 @@ const Auth = () => {
                   className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
                   required
                 />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" style={{ zIndex: 10 }} />
               </div>
             </div>
 
@@ -210,7 +212,6 @@ const Auth = () => {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <input
                     id="password"
                     type="password"
@@ -220,6 +221,7 @@ const Auth = () => {
                     className="w-full h-12 pl-10 pr-4 rounded-xl glass-morphism outline-none focus:ring-2 focus:ring-foreground transition-all"
                     required={!isForgotPassword}
                   />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" style={{ zIndex: 10 }} />
                 </div>
               </div>
             )}
@@ -292,60 +294,16 @@ const Auth = () => {
         </div>
       </main>
       
-      {/* Guest Mode Warning Dialog */}
-      <Dialog open={showGuestWarning} onOpenChange={setShowGuestWarning}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="w-5 h-5 text-amber-500" />
-              Guest Mode Information
-            </DialogTitle>
-            <DialogDescription>
-              Please read this important information before proceeding with guest mode.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-3">
-            <div className="space-y-2">
-              <h3 className="font-medium">Benefits of Creating an Account:</h3>
-              <ul className="list-disc list-inside text-sm space-y-1 pl-2">
-                <li>Access your journal from any device</li>
-                <li>Never lose your entries if your device is lost or damaged</li>
-                <li>Share your journey securely with loved ones</li>
-                <li>Get personalized recommendations and insights</li>
-              </ul>
-            </div>
-            
-            <div className="space-y-2">
-              <h3 className="font-medium">Guest Mode Limitations:</h3>
-              <ul className="list-disc list-inside text-sm space-y-1 pl-2">
-                <li>Data is stored <b>only on this device</b></li>
-                <li>Entries will be <b>lost if browser data is cleared</b></li>
-                <li>Cannot access your journal from other devices</li>
-                <li>Limited sharing capabilities</li>
-              </ul>
-            </div>
-          </div>
-          
-          <DialogFooter className="flex sm:flex-row sm:justify-between gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowGuestWarning(false)}
-              className="sm:flex-1"
-            >
-              Go Back & Sign Up
-            </Button>
-            <Button 
-              onClick={confirmGuestMode}
-              className="sm:flex-1"
-            >
-              Continue as Guest
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <RegisterBenefitsDialog
+        open={showRegisterBenefits}
+        onOpenChange={setShowRegisterBenefits}
+        title="Guest Mode Information"
+        description={benefitContexts.guestMode}
+        primaryActionLabel="Create Account"
+        secondaryActionLabel="Continue as Guest"
+        onSecondaryAction={confirmGuestMode}
+      />
 
-      {/* Data Migration Dialog */}
       <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -383,7 +341,6 @@ const Auth = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Data Loss Warning Dialog */}
       <Dialog open={showDataLossWarning} onOpenChange={setShowDataLossWarning}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

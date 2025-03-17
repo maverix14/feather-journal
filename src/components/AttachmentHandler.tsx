@@ -1,11 +1,16 @@
-
 import React, { useState, useCallback, useRef } from "react";
-import { Camera, ImageIcon, X, Mic } from "lucide-react";
+import { Camera, ImageIcon, X, Mic, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AudioRecorder from "@/components/AudioRecorder";
 import AudioPlayer from "@/components/AudioPlayer";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export type AttachmentType = "photo" | "gallery" | "audio" | "video";
+export type AttachmentType = "photo" | "gallery" | "audio";
 
 interface AttachmentHandlerProps {
   content: string;
@@ -39,10 +44,7 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
   const handleAudioComplete = (audioUrl: string, transcript: string) => {
     setIsRecording(false);
     handleAttachment("audio", audioUrl);
-    setContent(prev => {
-      if (prev.trim() === "") return transcript;
-      return `${prev}\n\n${transcript}`;
-    });
+    // Don't set transcript content since it's a premium feature
   };
 
   const cancelAudioRecording = () => {
@@ -97,16 +99,23 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
     });
   }, [attachments]);
 
-  // Handles image files selected through input elements
+  // Validates and handles image files selected through input elements
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: AttachmentType) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.type.startsWith('image/')) {
+      // Only allow JPG, PNG and HEIC formats
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/heic'];
+      
+      if (validTypes.includes(file.type.toLowerCase()) || 
+          file.name.toLowerCase().endsWith('.heic')) {
         const imageUrl = URL.createObjectURL(file);
         handleAttachment(type, imageUrl);
+      } else {
+        // Could add a toast here for invalid file type
+        console.warn('Invalid file type:', file.type);
       }
     }
     
@@ -154,7 +163,7 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
           <input 
             type="file" 
             ref={cameraInputRef}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/jpg,image/heic"
             capture="environment"
             onChange={(e) => handleFileInputChange(e, "photo")}
             className="hidden"
@@ -163,7 +172,7 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
           <input 
             type="file" 
             ref={galleryInputRef}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/jpg,image/heic"
             multiple
             onChange={(e) => handleFileInputChange(e, "gallery")}
             className="hidden"
@@ -194,6 +203,23 @@ const AttachmentHandler: React.FC<AttachmentHandlerProps> = ({
               Gallery
             </span>
           </button>
+          
+          <TooltipProvider>
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <div className={cn("attachment-button relative")}>
+                  <Mic className="w-6 h-6" />
+                  <span className="text-xs mt-1">
+                    Audio
+                  </span>
+                  <Info className="w-3 h-3 absolute -top-1 -right-1 text-primary" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Transcription coming soon (Premium)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

@@ -1,17 +1,16 @@
-
 import React from "react";
 import Logo from "@/components/Logo";
-import { ChevronRight, ShieldCheck, HeartHandshake, BookOpen, Smartphone } from "lucide-react";
+import { ChevronRight, ShieldCheck, HeartHandshake, BookOpen, Smartphone, Image, Users, BellRing } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen px-4 py-8 flex flex-col">
+    <div className="min-h-screen px-4 sm:px-16 md:px-24 lg:px-32 py-8 flex flex-col">
       <header className="flex justify-center mb-12 animate-slide-down">
         <Logo className="scale-125" />
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-md mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-center space-y-8 max-w-3xl mx-auto">
         <h1 className="text-3xl font-semibold tracking-tight text-center animate-fade-in">
           Capture Every Precious Moment of Your Journey
         </h1>
@@ -30,7 +29,7 @@ const Landing = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mt-12 animate-fade-in delay-300">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-12 animate-fade-in delay-300">
           <FeatureCard
             icon={<BookOpen className="w-5 h-5" />}
             title="Simple Journaling"
@@ -45,6 +44,21 @@ const Landing = () => {
             icon={<ShieldCheck className="w-5 h-5" />}
             title="Private & Secure"
             description="Your memories stay private and protected"
+          />
+          <FeatureCard
+            icon={<Image className="w-5 h-5" />}
+            title="Photo Memories"
+            description="Add images to preserve special moments"
+          />
+          <FeatureCard
+            icon={<Users className="w-5 h-5" />}
+            title="Inner Circle"
+            description="Create groups for family and friends"
+          />
+          <FeatureCard
+            icon={<BellRing className="w-5 h-5" />}
+            title="Kick Tracker"
+            description="Record baby kicks and movements"
           />
         </div>
 

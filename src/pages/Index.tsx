@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import BottomBar from "@/components/BottomBar";
@@ -7,23 +6,28 @@ import EntryCardSkeleton from "@/components/EntryCardSkeleton";
 import AdCard from "@/components/AdCard";
 import { getAllEntries, toggleFavorite, JournalEntry } from "@/lib/journalStorage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 const Index = () => {
   const [entries, setEntries] = useState<EntryProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { isGuestMode } = useAuth();
 
   // Load entries from localStorage
   useEffect(() => {
     // Small delay to simulate network loading for smoother UX
     const loadEntries = setTimeout(() => {
       try {
+        console.log("Loading entries from storage, guest mode:", isGuestMode);
         const storedEntries = getAllEntries();
+        console.log("Entries loaded:", storedEntries.length);
         
         // Convert stored entries to EntryProps format
         const formattedEntries: EntryProps[] = storedEntries.map(entry => ({
           ...entry,
           date: new Date(entry.date), // Convert ISO string back to Date object
+          isPartnerEntry: false, // In a real app, this would be determined based on user data
         }));
         
         setEntries(formattedEntries);
@@ -39,8 +43,22 @@ const Index = () => {
       }
     }, 250);
     
-    return () => clearTimeout(loadEntries);
-  }, [toast]);
+    // Setup periodic refresh to catch any updates to entries
+    const refreshInterval = setInterval(() => {
+      const storedEntries = getAllEntries();
+      const formattedEntries: EntryProps[] = storedEntries.map(entry => ({
+        ...entry,
+        date: new Date(entry.date),
+        isPartnerEntry: false,
+      }));
+      setEntries(formattedEntries);
+    }, 5000);
+    
+    return () => {
+      clearTimeout(loadEntries);
+      clearInterval(refreshInterval);
+    };
+  }, [toast, isGuestMode]);
 
   // Handle toggling favorite status
   const handleFavoriteToggle = (id: string) => {
@@ -75,8 +93,9 @@ const Index = () => {
 
     if (entries.length === 0) {
       return (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No journal entries yet. Create your first entry!</p>
+        <div className="text-center py-8 bg-white/80 rounded-xl shadow-sm">
+          <p className="text-muted-foreground mb-2">No journal entries yet.</p>
+          <p className="text-sm text-muted-foreground">Create your first entry using the + button below!</p>
         </div>
       );
     }
@@ -105,7 +124,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen pb-24 px-4">
+    <div className="min-h-screen pb-24 px-4 sm:px-16 md:px-24 lg:px-32">
       <Header />
       
       <main>

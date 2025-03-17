@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from "react";
 import GroupEntryCard from "./GroupEntryCard";
 import { Button } from "./ui/button";
-import { UserPlus, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { UserPlus, Link as LinkIcon, ArrowLeft, HeartHandshake } from "lucide-react";
 import { 
   getAllEntries,
   getCommentsForEntry,
@@ -21,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import AdCard from "@/components/AdCard";
+import { featureFlags } from "@/config/features";
 
 interface GroupFeedProps {
   group: {
@@ -38,6 +38,8 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState("");
+  const isPartnerGroup = group.id === 'partner';
+  const isPrivateGroup = group.id === 'private';
   
   useEffect(() => {
     // Get shared entries for this group
@@ -57,18 +59,25 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
         media: entry.media,
         mood: entry.mood,
         sharedBy: "You", // In a real app, this would be the user's name
-        comments: comments.map(c => ({
-          id: c.id,
-          author: c.author,
-          content: c.content,
-          date: new Date(c.date)
-        })),
+        comments: isPrivateGroup 
+          ? comments.map(c => ({
+              id: c.id,
+              author: generateAnonymousName(c.id),
+              content: c.content,
+              date: new Date(c.date)
+            }))
+          : comments.map(c => ({
+              id: c.id,
+              author: c.author,
+              content: c.content,
+              date: new Date(c.date)
+            })),
         likes: likes.map(l => l.userId)
       };
     });
     
     setEntries(formattedEntries);
-  }, [group.id]);
+  }, [group.id, isPrivateGroup]);
   
   const handleInvite = () => {
     if (!email.trim() || !email.includes('@')) {
@@ -100,6 +109,26 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
     }
   };
   
+  const handleLinkPartner = () => {
+    if (!email.trim() || !email.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address to link with your partner",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // In a real app, this would send an actual request
+    toast({
+      title: "Partner link request sent",
+      description: `A link request has been sent to ${email}. They'll need to accept it to enable cross-sharing.`
+    });
+    
+    setEmail("");
+    setLinkDialogOpen(false);
+  };
+  
   const handleGenerateLink = () => {
     // Generate a fake invite link
     const link = `https://app.example.com/join-group/${group.id}/${Date.now()}`;
@@ -120,6 +149,27 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
     });
   };
 
+  // Helper function to generate anonymous names for Private group
+  const generateAnonymousName = (id: string): string => {
+    // List of adjectives and nouns for generating names
+    const adjectives = [
+      'happy', 'quiet', 'calm', 'gentle', 'brave', 
+      'wise', 'kind', 'swift', 'bold', 'bright'
+    ];
+    
+    const nouns = [
+      'penguin', 'dolphin', 'panda', 'tiger', 'eagle',
+      'owl', 'koala', 'rabbit', 'fox', 'bear'
+    ];
+    
+    // Use the id to deterministically select an adjective and noun
+    const idSum = id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const adjectiveIndex = idSum % adjectives.length;
+    const nounIndex = Math.floor(idSum / adjectives.length) % nouns.length;
+    
+    return `${adjectives[adjectiveIndex]}-${nouns[nounIndex]}`;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -134,6 +184,18 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
         </div>
         
         <div className="flex gap-2">
+          {isPartnerGroup && featureFlags.partnerLinkingEnabled && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-1"
+              onClick={() => setLinkDialogOpen(true)}
+            >
+              <HeartHandshake className="w-4 h-4" />
+              <span className="text-xs">Link Partner</span>
+            </Button>
+          )}
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -149,8 +211,8 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
             size="sm" 
             className="flex items-center gap-1"
             onClick={() => {
-              setLinkDialogOpen(true);
               handleGenerateLink();
+              setLinkDialogOpen(true);
             }}
           >
             <LinkIcon className="w-4 h-4" />
@@ -189,7 +251,13 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
           <DialogHeader>
             <DialogTitle>Invite to {group.name}</DialogTitle>
             <DialogDescription>
-              Send an email invitation to join your private group.
+              {isPartnerGroup ? (
+                "Invite your partner to view and interact with your shared entries."
+              ) : isPrivateGroup ? (
+                "Invite someone to your Private group where their identity will be anonymized to other members."
+              ) : (
+                "Send an email invitation to join your private group."
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -212,34 +280,76 @@ const GroupFeed: React.FC<GroupFeedProps> = ({ group, onBack }) => {
         </DialogContent>
       </Dialog>
       
-      {/* Share link dialog */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Share Group Link</DialogTitle>
-            <DialogDescription>
-              Share this link to invite people to your {group.name} group.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2">
-              <div className="grid flex-1 gap-2">
+      {/* Link Partner dialog */}
+      {isPartnerGroup && (
+        <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Link with Your Partner</DialogTitle>
+              <DialogDescription>
+                Link your account with your partner to enable cross-sharing of journal entries.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 p-3 rounded-md">
+                <h4 className="text-sm font-medium mb-2">What is Cross-Sharing?</h4>
+                <p className="text-sm text-muted-foreground">
+                  Cross-sharing allows you and your partner to automatically see each other's journal entries on your home feeds.
+                  Unlike regular sharing, cross-shared entries appear directly on both of your home pages.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
                 <Input
-                  readOnly
-                  value={inviteLink}
-                  className="text-xs"
+                  placeholder="Partner's email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full"
                 />
               </div>
-              <Button type="button" size="sm" onClick={handleCopyLink}>
-                Copy
-              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              This link will give access to your private group. Only share with people you trust.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setLinkDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleLinkPartner}>
+                Send Link Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Share link dialog (for non-partner groups) */}
+      {!isPartnerGroup && (
+        <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Share Group Link</DialogTitle>
+              <DialogDescription>
+                Share this link to invite people to your {group.name} group.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center space-x-2">
+                <div className="grid flex-1 gap-2">
+                  <Input
+                    readOnly
+                    value={inviteLink}
+                    className="text-xs"
+                  />
+                </div>
+                <Button type="button" size="sm" onClick={handleCopyLink}>
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This link will give access to your private group. Only share with people you trust.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

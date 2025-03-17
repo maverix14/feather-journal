@@ -32,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if guest mode is enabled
       const guestMode = localStorage.getItem("guestMode");
       if (guestMode === "true") {
+        console.log("Guest mode detected in AuthContext");
         setIsGuestMode(true);
         setLoading(false);
         return;
@@ -46,6 +47,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkUserSession();
+    
+    // Listen for storage events to detect guest mode changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "guestMode") {
+        setIsGuestMode(e.newValue === "true");
+      }
+    };
+    
+    // Custom event for same-window updates
+    const handleCustomStorageChange = () => {
+      const guestMode = localStorage.getItem("guestMode");
+      setIsGuestMode(guestMode === "true");
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('localStorageChange', handleCustomStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange', handleCustomStorageChange);
+    };
   }, []);
 
   // Update user profile
@@ -93,6 +115,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ensure guest mode is disabled when logging in
       localStorage.removeItem("guestMode");
       setIsGuestMode(false);
+      
+      // Dispatch custom event for other components to sync
+      window.dispatchEvent(new Event('localStorageChange'));
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -117,9 +142,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
+      
       // Ensure guest mode is disabled when signing up
       localStorage.removeItem("guestMode");
       setIsGuestMode(false);
+      
+      // Dispatch custom event for other components to sync
+      window.dispatchEvent(new Event('localStorageChange'));
     } catch (error) {
       console.error("Signup error:", error);
       throw error;
@@ -149,6 +178,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("user");
     setIsGuestMode(false);
     localStorage.removeItem("guestMode");
+    // Dispatch custom event to ensure all components update
+    window.dispatchEvent(new Event('localStorageChange'));
   };
 
   return (

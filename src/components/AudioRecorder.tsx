@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Mic, Pause, StopCircle, X, Music } from "lucide-react";

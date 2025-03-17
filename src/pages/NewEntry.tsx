@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +19,7 @@ const NewEntry = () => {
   const [mood, setMood] = useState<MoodType>(null);
   const [kickCount, setKickCount] = useState(0);
   const [isShared, setIsShared] = useState(false); // Default to private
+  const [sharedWithGroups, setSharedWithGroups] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<{ type: AttachmentType; url: string }[]>([]);
   const [backgroundColor, setBackgroundColor] = useState("#FAFAFA");
 
@@ -66,7 +66,8 @@ const NewEntry = () => {
         media: attachments,
         mood: mood,
         kickCount: kickCount,
-        isShared: isShared
+        isShared: isShared,
+        sharedWithGroups: sharedWithGroups
       });
       
       toast({
@@ -92,13 +93,16 @@ const NewEntry = () => {
     }
   };
 
-  const handleSharingChange = (newValue: boolean) => {
+  const handleSharingChange = (newValue: boolean, selectedGroups?: string[]) => {
     setIsShared(newValue);
+    if (selectedGroups) {
+      setSharedWithGroups(selectedGroups);
+    }
   };
 
   return (
     <div
-      className="min-h-screen pb-24 px-4 transition-colors duration-1000"
+      className="min-h-screen pb-24 px-4 sm:px-16 md:px-24 lg:px-32 transition-colors duration-1000"
       style={{ backgroundColor: backgroundColor }}
     >
       <EntryHeading handleSubmit={handleSubmit} />

@@ -1,4 +1,3 @@
-
 export interface RecordingResult {
   audioUrl: string;
   blob: Blob;

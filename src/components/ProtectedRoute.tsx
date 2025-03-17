@@ -1,6 +1,5 @@
-
-import React from "react";
-import { Navigate } from "react-router-dom";
+import React, { useEffect } from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 interface ProtectedRouteProps {
@@ -9,6 +8,17 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading, isGuestMode } = useAuth();
+  const location = useLocation();
+
+  // Add debugging logs to track what's happening
+  useEffect(() => {
+    console.log("ProtectedRoute state:", { 
+      isAuthenticated, 
+      loading, 
+      isGuestMode, 
+      path: location.pathname 
+    });
+  }, [isAuthenticated, loading, isGuestMode, location]);
 
   if (loading) {
     // Return a loading state while checking authentication
@@ -22,11 +32,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // If not authenticated and not in guest mode, redirect to landing
   if (!isAuthenticated && !isGuestMode) {
-    // Redirect to landing page if not authenticated and not in guest mode
+    console.log("Redirecting to landing from ProtectedRoute");
     return <Navigate to="/landing" replace />;
   }
 
+  // User is either authenticated or in guest mode, show the protected content
   return <>{children}</>;
 };
 
